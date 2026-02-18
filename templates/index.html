@@ -144,6 +144,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
         <option value="ultra">Ultra</option>
       </select>
     </div>
+    <div>
+      <label for="prevFps">Frame Rate</label>
+      <select id="prevFps">
+        <option value="24">24 fps</option>
+        <option value="30" selected>30 fps</option>
+        <option value="60">60 fps</option>
+      </select>
+    </div>
   </div>
   <button class="btn-primary" id="btnGenerate" onclick="startGeneration()" style="width:100%;margin-top:14px;padding:12px;font-size:15px">Generate Previews</button>
   <div id="locationStatus"></div>
@@ -326,6 +334,7 @@ async function startGeneration() {
       duration_sec: +document.getElementById('prevDuration').value,
       resolution: document.getElementById('prevResolution').value,
       texture: document.getElementById('prevTexture').value,
+      fps: +document.getElementById('prevFps').value,
     })
   });
   const genData = await genRes.json();

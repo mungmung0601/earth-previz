@@ -34,7 +34,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--esp", type=str, default=None, help="Earth Studio ESP/JSON file path")
     parser.add_argument("--shots", type=int, default=10, help="Number of shots to generate (max 10, ignored in ESP mode)")
     parser.add_argument("--duration-sec", type=int, default=300, help="Duration per shot (seconds), default 300s")
-    parser.add_argument("--fps", type=int, default=24, help="Frame rate")
+    parser.add_argument("--fps", type=int, default=30, help="Frame rate")
     parser.add_argument(
         "--resolution",
         choices=list(RESOLUTION_PRESETS),

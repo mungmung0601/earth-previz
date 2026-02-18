@@ -121,7 +121,8 @@ def geocode_address():
 # ─── API: Generate previews ─────────────────────────────────────────────
 
 def _generate_previews(task_id: str, lat: float, lng: float, num_shots: int,
-                       duration_sec: int = 7, resolution: str = "270p", texture: str = "medium"):
+                       duration_sec: int = 7, resolution: str = "270p", texture: str = "medium",
+                       fps: int = 30):
     task = tasks[task_id]
     api_key = stored_api_key.get("key", "")
     if not api_key:
@@ -150,7 +151,7 @@ def _generate_previews(task_id: str, lat: float, lng: float, num_shots: int,
             kml_path = run_dir / "kml" / f"{shot.shot_id}.kml"
             export_kml(shot, kml_path, fps=2)
             jsx_path = run_dir / "jsx" / f"{shot.shot_id}.jsx"
-            export_jsx(shot, jsx_path, fps=24, width=width, height=height)
+            export_jsx(shot, jsx_path, fps=fps, width=width, height=height)
 
             from renderer import RenderOptions, render_shot_frames
 
@@ -159,13 +160,13 @@ def _generate_previews(task_id: str, lat: float, lng: float, num_shots: int,
                 shot=shot,
                 frame_dir=frame_dir,
                 options=RenderOptions(
-                    width=width, height=height, fps=24,
+                    width=width, height=height, fps=fps,
                     google_api_key=api_key, headless=True,
                 ),
             )
 
             video_path = run_dir / "videos" / f"{shot.shot_id}.mp4"
-            _encode_with_metadata(frame_dir, video_path, shot, analysis, fps=24)
+            _encode_with_metadata(frame_dir, video_path, shot, analysis, fps=fps)
 
             import shutil
             shutil.rmtree(frame_dir, ignore_errors=True)
@@ -251,6 +252,7 @@ def start_generate():
     duration_sec = min(max(int(data.get("duration_sec", 7)), 3), 60)
     resolution = data.get("resolution", "270p")
     texture = data.get("texture", "medium")
+    fps = min(max(int(data.get("fps", 30)), 24), 60)
 
     if lat is None or lng is None:
         return jsonify({"ok": False, "error": "Coordinates are required."})
@@ -269,7 +271,7 @@ def start_generate():
     thread = threading.Thread(
         target=_generate_previews,
         args=(task_id, lat, lng, num_shots),
-        kwargs={"duration_sec": duration_sec, "resolution": resolution, "texture": texture},
+        kwargs={"duration_sec": duration_sec, "resolution": resolution, "texture": texture, "fps": fps},
         daemon=True,
     )
     thread.start()
@@ -352,13 +354,13 @@ def regenerate_shot():
                 shot=shot,
                 frame_dir=frame_dir,
                 options=RenderOptions(
-                    width=width, height=height, fps=24,
+                    width=width, height=height, fps=30,
                     google_api_key=api_key, headless=True,
                 ),
             )
 
             video_path = run_dir / "videos" / "custom_regen.mp4"
-            _encode_with_metadata(frame_dir, video_path, shot, analysis, fps=24, codec=codec)
+            _encode_with_metadata(frame_dir, video_path, shot, analysis, fps=30, codec=codec)
 
             import shutil
             shutil.rmtree(frame_dir, ignore_errors=True)
@@ -366,7 +368,7 @@ def regenerate_shot():
             kml_path = run_dir / "kml" / "custom_regen.kml"
             export_kml(shot, kml_path, fps=2)
             jsx_path = run_dir / "jsx" / "custom_regen.jsx"
-            export_jsx(shot, jsx_path, fps=24, width=width, height=height)
+            export_jsx(shot, jsx_path, fps=30, width=width, height=height)
 
             task["videos"].append({
                 "shot_id": "custom_regen",
