@@ -1,0 +1,393 @@
+from __future__ import annotations
+
+import math
+from typing import Callable
+
+from models import CameraKeyframe, ShotPlan
+
+EARTH_RADIUS_M = 6_378_137.0
+
+
+def _lerp(a: float, b: float, t: float) -> float:
+    return a + (b - a) * t
+
+
+def _offset_lat_lng(lat: float, lng: float, north_m: float, east_m: float) -> tuple[float, float]:
+    lat_rad = math.radians(lat)
+    d_lat = north_m / EARTH_RADIUS_M
+    d_lng = east_m / (EARTH_RADIUS_M * max(math.cos(lat_rad), 1e-8))
+    return lat + math.degrees(d_lat), lng + math.degrees(d_lng)
+
+
+def _bearing_deg(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    lat1_r, lat2_r = math.radians(lat1), math.radians(lat2)
+    dlng = math.radians(lng2 - lng1)
+    y = math.sin(dlng) * math.cos(lat2_r)
+    x = math.cos(lat1_r) * math.sin(lat2_r) - math.sin(lat1_r) * math.cos(lat2_r) * math.cos(dlng)
+    brng = math.degrees(math.atan2(y, x))
+    return (brng + 360.0) % 360.0
+
+
+def _ground_distance_m(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    lat1_r, lng1_r = math.radians(lat1), math.radians(lng1)
+    lat2_r, lng2_r = math.radians(lat2), math.radians(lng2)
+    dlat = lat2_r - lat1_r
+    dlng = lng2_r - lng1_r
+    a = math.sin(dlat / 2) ** 2 + math.cos(lat1_r) * math.cos(lat2_r) * math.sin(dlng / 2) ** 2
+    return 2 * EARTH_RADIUS_M * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def _look_at_tilt_deg(
+    cam_lat: float, cam_lng: float, cam_alt: float,
+    target_lat: float, target_lng: float,
+) -> float:
+    """카메라에서 타겟 좌표를 정확히 프레임 중앙에 놓기 위한 tilt 각도."""
+    ground_dist = _ground_distance_m(cam_lat, cam_lng, target_lat, target_lng)
+    return math.degrees(math.atan2(cam_alt, max(ground_dist, 1.0)))
+
+
+_ORBIT_TILT_OFFSET_DEG = -5.0
+
+
+def _orbit_keyframes(
+    target_lat: float,
+    target_lng: float,
+    duration_sec: int,
+    *,
+    radius_start_m: float,
+    radius_end_m: float,
+    alt_start_m: float,
+    alt_end_m: float,
+    azimuth_start_deg: float,
+    sweep_deg: float,
+    tilt_offset_deg: float = _ORBIT_TILT_OFFSET_DEG,
+    samples: int = 13,
+) -> list[CameraKeyframe]:
+    keyframes: list[CameraKeyframe] = []
+    for i in range(samples):
+        p = i / (samples - 1)
+        radius = _lerp(radius_start_m, radius_end_m, p)
+        azimuth_deg = azimuth_start_deg + sweep_deg * p
+        azimuth = math.radians(azimuth_deg)
+        north = radius * math.cos(azimuth)
+        east = radius * math.sin(azimuth)
+
+        lat, lng = _offset_lat_lng(target_lat, target_lng, north, east)
+        alt = _lerp(alt_start_m, alt_end_m, p)
+        heading_deg = _bearing_deg(lat, lng, target_lat, target_lng)
+        tilt_deg = _look_at_tilt_deg(lat, lng, alt, target_lat, target_lng) + tilt_offset_deg
+
+        keyframes.append(
+            CameraKeyframe(
+                t=duration_sec * p,
+                lat=lat,
+                lng=lng,
+                alt_m=alt,
+                heading_deg=heading_deg,
+                tilt_deg=tilt_deg,
+            )
+        )
+    return keyframes
+
+
+def _dolly_keyframes(
+    target_lat: float,
+    target_lng: float,
+    duration_sec: int,
+    *,
+    approach_azimuth_deg: float,
+    distance_start_m: float,
+    distance_end_m: float,
+    alt_start_m: float,
+    alt_end_m: float,
+    lateral_offset_start_m: float = 0.0,
+    lateral_offset_end_m: float = 0.0,
+    look_forward: bool = False,
+    forward_tilt_deg: float = 78.0,
+    samples: int = 13,
+) -> list[CameraKeyframe]:
+    forward = math.radians(approach_azimuth_deg)
+    right = math.radians(approach_azimuth_deg + 90.0)
+
+    positions: list[tuple[float, float, float]] = []
+    for i in range(samples):
+        p = i / (samples - 1)
+        dist = _lerp(distance_start_m, distance_end_m, p)
+        lateral = _lerp(lateral_offset_start_m, lateral_offset_end_m, p)
+
+        north = dist * math.cos(forward) + lateral * math.cos(right)
+        east = dist * math.sin(forward) + lateral * math.sin(right)
+        lat, lng = _offset_lat_lng(target_lat, target_lng, north, east)
+        alt = _lerp(alt_start_m, alt_end_m, p)
+        positions.append((lat, lng, alt))
+
+    keyframes: list[CameraKeyframe] = []
+    for i, (lat, lng, alt) in enumerate(positions):
+        p = i / (samples - 1)
+
+        if look_forward:
+            if i < len(positions) - 1:
+                nxt_lat, nxt_lng, _ = positions[i + 1]
+            else:
+                prv_lat, prv_lng, _ = positions[i - 1]
+                nxt_lat = lat + (lat - prv_lat)
+                nxt_lng = lng + (lng - prv_lng)
+            heading_deg = _bearing_deg(lat, lng, nxt_lat, nxt_lng)
+            tilt_deg = forward_tilt_deg
+        else:
+            heading_deg = _bearing_deg(lat, lng, target_lat, target_lng)
+            tilt_deg = _look_at_tilt_deg(lat, lng, alt, target_lat, target_lng)
+
+        keyframes.append(
+            CameraKeyframe(
+                t=duration_sec * p,
+                lat=lat,
+                lng=lng,
+                alt_m=alt,
+                heading_deg=heading_deg,
+                tilt_deg=tilt_deg,
+            )
+        )
+    return keyframes
+
+
+def _figure_eight_keyframes(
+    target_lat: float,
+    target_lng: float,
+    duration_sec: int,
+    *,
+    radius_m: float,
+    alt_start_m: float,
+    alt_end_m: float,
+    loops: float = 1.0,
+    samples: int = 17,
+) -> list[CameraKeyframe]:
+    keyframes: list[CameraKeyframe] = []
+    for i in range(samples):
+        p = i / (samples - 1)
+        theta = 2.0 * math.pi * loops * p
+        east = radius_m * math.sin(theta)
+        north = radius_m * math.sin(theta) * math.cos(theta)
+        lat, lng = _offset_lat_lng(target_lat, target_lng, north, east)
+        alt = _lerp(alt_start_m, alt_end_m, p)
+        heading_deg = _bearing_deg(lat, lng, target_lat, target_lng)
+        tilt_deg = _look_at_tilt_deg(lat, lng, alt, target_lat, target_lng)
+
+        keyframes.append(
+            CameraKeyframe(
+                t=duration_sec * p,
+                lat=lat,
+                lng=lng,
+                alt_m=alt,
+                heading_deg=heading_deg,
+                tilt_deg=tilt_deg,
+            )
+        )
+    return keyframes
+
+
+def generate_shot_plans(
+    target_lat: float,
+    target_lng: float,
+    duration_sec: int = 300,
+    num_shots: int = 10,
+) -> list[ShotPlan]:
+    builders: list[tuple[str, str, str, str, Callable[[], list[CameraKeyframe]]]] = [
+        (
+            "aerial_slow_orbit_close",
+            "Aerial Slow Orbit (Close)",
+            "helicopter",
+            "중고도 근접 오비트. 빌딩이 잘리지 않는 중간 거리.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=850,
+                radius_end_m=850,
+                alt_start_m=475,
+                alt_end_m=475,
+                azimuth_start_deg=0,
+                sweep_deg=45,
+            ),
+        ),
+        (
+            "aerial_slow_orbit_wide",
+            "Aerial Slow Orbit (Wide)",
+            "helicopter",
+            "고고도 와이드 오비트. 도시 스케일 스크린세이버.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=1_200,
+                radius_end_m=1_200,
+                alt_start_m=600,
+                alt_end_m=600,
+                azimuth_start_deg=45,
+                sweep_deg=40,
+            ),
+        ),
+        (
+            "aerial_high_orbit",
+            "Aerial High Orbit",
+            "helicopter",
+            "중고도 오비트. close와 기존 high의 중간 거리.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=1_325,
+                radius_end_m=1_325,
+                alt_start_m=688,
+                alt_end_m=688,
+                azimuth_start_deg=180,
+                sweep_deg=35,
+            ),
+        ),
+        (
+            "aerial_grand_panorama",
+            "Aerial Grand Panorama",
+            "helicopter",
+            "초고도 대형 아크. 지형 전체를 조망.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=2_500,
+                radius_end_m=2_500,
+                alt_start_m=1_400,
+                alt_end_m=1_400,
+                azimuth_start_deg=270,
+                sweep_deg=30,
+            ),
+        ),
+        (
+            "aerial_flyby_north",
+            "Aerial Flyby (North→South)",
+            "helicopter",
+            "직선 플라이바이. 빌딩 옆을 스쳐 지나가는 에이리얼 샷 (전방 주시).",
+            lambda: _dolly_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                approach_azimuth_deg=0,
+                distance_start_m=400,
+                distance_end_m=400,
+                alt_start_m=500,
+                alt_end_m=500,
+                lateral_offset_start_m=-1_500,
+                lateral_offset_end_m=1_500,
+                look_forward=True,
+                forward_tilt_deg=78.0,
+            ),
+        ),
+        (
+            "aerial_flythrough_east",
+            "Aerial Flythrough (East→West)",
+            "helicopter",
+            "플라이스루. 빌딩을 화면 정중앙에 두고 옆으로 통과.",
+            lambda: _dolly_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                approach_azimuth_deg=90,
+                distance_start_m=350,
+                distance_end_m=350,
+                alt_start_m=600,
+                alt_end_m=600,
+                lateral_offset_start_m=-1_200,
+                lateral_offset_end_m=1_200,
+                look_forward=False,
+            ),
+        ),
+        (
+            "aerial_flyby_diagonal",
+            "Aerial Flyby (Diagonal)",
+            "helicopter",
+            "대각선 플라이바이. 빌딩 옆을 비스듬히 스쳐 지나감 (전방 주시).",
+            lambda: _dolly_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                approach_azimuth_deg=45,
+                distance_start_m=450,
+                distance_end_m=450,
+                alt_start_m=700,
+                alt_end_m=700,
+                lateral_offset_start_m=-1_400,
+                lateral_offset_end_m=1_400,
+                look_forward=True,
+                forward_tilt_deg=78.0,
+            ),
+        ),
+        (
+            "aerial_slow_descent",
+            "Aerial Slow Descent Orbit",
+            "helicopter",
+            "고도를 천천히 낮추며 오비트. 점점 가까워지는 느낌.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=1_500,
+                radius_end_m=800,
+                alt_start_m=1_000,
+                alt_end_m=450,
+                azimuth_start_deg=90,
+                sweep_deg=50,
+            ),
+        ),
+        (
+            "aerial_slow_ascent",
+            "Aerial Slow Ascent Orbit",
+            "helicopter",
+            "고도를 천천히 올리며 오비트. 점점 스케일이 커지는 느낌.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=600,
+                radius_end_m=1_600,
+                alt_start_m=400,
+                alt_end_m=1_100,
+                azimuth_start_deg=200,
+                sweep_deg=50,
+            ),
+        ),
+        (
+            "aerial_ultra_high",
+            "Aerial Ultra High Overview",
+            "helicopter",
+            "초고도 초광역 오비트. 지역 전체를 조망하는 스크린세이버.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=3_000,
+                radius_end_m=3_000,
+                alt_start_m=2_000,
+                alt_end_m=2_000,
+                azimuth_start_deg=120,
+                sweep_deg=25,
+            ),
+        ),
+    ]
+
+    if num_shots < 1:
+        raise ValueError("num_shots must be at least 1")
+
+    plans: list[ShotPlan] = []
+    for shot_id, title, style, notes, builder in builders[: min(num_shots, len(builders))]:
+        plans.append(
+            ShotPlan(
+                shot_id=shot_id,
+                title=title,
+                style=style,
+                duration_sec=duration_sec,
+                target_lat=target_lat,
+                target_lng=target_lng,
+                keyframes=builder(),
+                notes=notes,
+            )
+        )
+    return plans

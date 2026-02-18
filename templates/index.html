@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Aerial Cinematic Bot</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d1117;--surface:#161b22;--border:#30363d;--text:#e6edf3;--text2:#8b949e;--accent:#58a6ff;--accent2:#238636;--danger:#da3633;--success:#3fb950;--radius:10px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{color:var(--accent);text-decoration:none}
+
+.container{max-width:1200px;margin:0 auto;padding:24px}
+header{text-align:center;padding:32px 0 24px;border-bottom:1px solid var(--border);margin-bottom:32px}
+header h1{font-size:28px;font-weight:700;letter-spacing:-0.5px}
+header p{color:var(--text2);margin-top:6px;font-size:14px}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px}
+.card h2{font-size:18px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card h2 .num{background:var(--accent);color:#000;width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+
+label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500}
+input[type=text],input[type=number],select{width:100%;padding:10px 14px;background:#0d1117;border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;outline:none;transition:border .15s}
+input:focus,select:focus{border-color:var(--accent)}
+.input-row{display:flex;gap:12px;align-items:flex-end}
+.input-row>*{flex:1}
+
+button{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:opacity .15s}
+button:hover{opacity:.85}
+button:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#000}
+.btn-success{background:var(--accent2);color:#fff}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{padding:6px 14px;font-size:13px}
+
+.status-msg{margin-top:12px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.5}
+.status-ok{background:#0d2818;border:1px solid #238636;color:var(--success)}
+.status-err{background:#2d1117;border:1px solid #da3633;color:#f85149}
+.status-info{background:#0d1d33;border:1px solid #1f6feb;color:var(--accent)}
+
+.progress-bar{width:100%;height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:12px}
+.progress-bar .fill{height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+.progress-text{font-size:13px;color:var(--text2);margin-top:6px}
+
+.video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-top:16px}
+.video-card{background:#0d1117;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;cursor:pointer;transition:border .2s,transform .2s}
+.video-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.video-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(88,166,255,.3)}
+.video-card video{width:100%;display:block;background:#000}
+.video-card .info{padding:12px}
+.video-card .info h4{font-size:14px;margin-bottom:4px}
+.video-card .info p{font-size:12px;color:var(--text2)}
+.video-card .meta-badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.badge{padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-blue{background:#1f3d5c;color:var(--accent)}
+.badge-green{background:#0d2818;color:var(--success)}
+.badge-orange{background:#3d2b10;color:#e3b341}
+
+.editor-panel{display:none;margin-top:20px}
+.editor-panel.active{display:block}
+.slider-group{margin-bottom:16px}
+.slider-group label{display:flex;justify-content:space-between;align-items:center}
+.slider-group label span{font-size:13px;color:var(--accent);font-weight:600}
+input[type=range]{width:100%;-webkit-appearance:none;background:var(--border);height:6px;border-radius:3px;outline:none;margin-top:6px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer}
+
+.gen-options{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
+@media(max-width:700px){.gen-options{grid-template-columns:1fr}.video-grid{grid-template-columns:1fr}}
+
+.hidden{display:none}
+.spin{display:inline-block;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Aerial Cinematic Bot</h1>
+  <p>좌표 또는 주소를 입력하면 자동으로 에이리얼 시네마틱 영상을 생성합니다</p>
+</header>
+
+<!-- STEP 1: API Key -->
+<div class="card" id="step-key">
+  <h2><span class="num">1</span> API 키 설정</h2>
+  <label for="apiKey">Google Maps API Key</label>
+  <div class="input-row">
+    <input type="text" id="apiKey" placeholder="AIzaSy...">
+    <button class="btn-primary" id="btnValidate" onclick="validateKey()">검증</button>
+  </div>
+  <div id="keyStatus"></div>
+</div>
+
+<!-- STEP 2: Location -->
+<div class="card hidden" id="step-location">
+  <h2><span class="num">2</span> 위치 입력 + 생성 설정</h2>
+  <label for="locationQuery">주소 또는 좌표 (예: "1472 Broadway, New York" 또는 "40.756, -73.986")</label>
+  <div class="input-row">
+    <input type="text" id="locationQuery" placeholder="주소, 건물 이름, 또는 위도,경도">
+  </div>
+  <div class="gen-options" style="margin-top:14px">
+    <div>
+      <label for="numShots">샷 수</label>
+      <select id="numShots">
+        <option value="3">3</option>
+        <option value="5" selected>5</option>
+        <option value="7">7</option>
+        <option value="10">10</option>
+      </select>
+    </div>
+    <div>
+      <label for="prevDuration">영상 길이 (초)</label>
+      <input type="number" id="prevDuration" value="7" min="3" max="60">
+    </div>
+    <div>
+      <label for="prevResolution">해상도</label>
+      <select id="prevResolution">
+        <option value="270p" selected>270p (480×270)</option>
+        <option value="480p">480p (854×480)</option>
+        <option value="720p">720p (1280×720)</option>
+        <option value="1080p">1080p (1920×1080)</option>
+        <option value="4k">4K (3840×2160)</option>
+      </select>
+    </div>
+    <div>
+      <label for="prevTexture">텍스처 퀄리티</label>
+      <select id="prevTexture">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="ultra">Ultra</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn-primary" id="btnGenerate" onclick="startGeneration()" style="width:100%;margin-top:14px;padding:12px;font-size:15px">프리뷰 생성</button>
+  <div id="locationStatus"></div>
+  <div id="progressArea" class="hidden" style="margin-top:16px">
+    <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-text" id="progressText">준비 중...</div>
+  </div>
+</div>
+
+<!-- STEP 3: Video Previews -->
+<div class="card hidden" id="step-preview">
+  <h2><span class="num">3</span> 프리뷰 선택</h2>
+  <p style="font-size:13px;color:var(--text2);margin-bottom:8px">영상을 클릭하여 선택하세요. 선택한 영상의 카메라를 편집할 수 있습니다.</p>
+  <div class="video-grid" id="videoGrid"></div>
+</div>
+
+<!-- STEP 4: Editor -->
+<div class="card hidden" id="step-editor">
+  <h2><span class="num">4</span> 카메라 편집</h2>
+  <div id="selectedVideoContainer" style="margin-bottom:16px">
+    <video id="selectedVideo" controls muted loop style="width:100%;max-height:360px;background:#000;border-radius:8px"></video>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div>
+      <div class="slider-group">
+        <label>고도 (Altitude) <span id="valAlt">500m</span></label>
+        <input type="range" id="sliderAlt" min="100" max="5000" value="500" step="50" oninput="updateSliderLabel('Alt','m')">
+      </div>
+      <div class="slider-group">
+        <label>오비트 반경 <span id="valRadius">850m</span></label>
+        <input type="range" id="sliderRadius" min="200" max="5000" value="850" step="50" oninput="updateSliderLabel('Radius','m')">
+      </div>
+      <div class="slider-group">
+        <label>시작 방위각 (Heading) <span id="valHeading">0°</span></label>
+        <input type="range" id="sliderHeading" min="0" max="360" value="0" step="5" oninput="updateSliderLabel('Heading','°')">
+      </div>
+    </div>
+    <div>
+      <div class="slider-group">
+        <label>에이밍 틸트 (Tilt Offset) <span id="valTilt">-5°</span></label>
+        <input type="range" id="sliderTilt" min="-20" max="20" value="-5" step="1" oninput="updateSliderLabel('Tilt','°')">
+      </div>
+      <div class="slider-group">
+        <label>회전 범위 (Sweep) <span id="valSweep">45°</span></label>
+        <input type="range" id="sliderSweep" min="10" max="360" value="45" step="5" oninput="updateSliderLabel('Sweep','°')">
+      </div>
+      <div class="slider-group">
+        <label>속도 배수 <span id="valSpeed">1.0x</span></label>
+        <input type="range" id="sliderSpeed" min="0.2" max="3.0" value="1.0" step="0.1" oninput="document.getElementById('valSpeed').textContent=this.value+'x'">
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size:15px;margin:20px 0 12px">렌더링 옵션</h3>
+  <div class="gen-options">
+    <div>
+      <label for="genResolution">해상도</label>
+      <select id="genResolution">
+        <option value="480p">480p (854×480)</option>
+        <option value="720p">720p (1280×720)</option>
+        <option value="1080p" selected>1080p (1920×1080)</option>
+        <option value="1440p">1440p (2560×1440)</option>
+        <option value="4k">4K (3840×2160)</option>
+      </select>
+    </div>
+    <div>
+      <label for="genTexture">텍스처 퀄리티</label>
+      <select id="genTexture">
+        <option value="low">Low</option>
+        <option value="medium" selected>Medium</option>
+        <option value="high">High</option>
+        <option value="ultra">Ultra</option>
+      </select>
+    </div>
+    <div>
+      <label for="genDuration">영상 길이 (초)</label>
+      <input type="number" id="genDuration" value="7" min="3" max="60">
+    </div>
+  </div>
+
+  <button class="btn-success" style="width:100%;padding:14px;font-size:16px" id="btnRegenerate" onclick="regenerate()">Generate</button>
+  <div id="regenStatus"></div>
+  <div id="regenProgress" class="hidden" style="margin-top:12px">
+    <div class="progress-bar"><div class="fill" id="regenFill" style="width:0%"></div></div>
+    <div class="progress-text" id="regenText">렌더링 중...</div>
+  </div>
+</div>
+
+<!-- STEP 5: Final Result -->
+<div class="card hidden" id="step-result">
+  <h2><span class="num">5</span> 최종 결과</h2>
+  <video id="finalVideo" controls style="width:100%;border-radius:8px;background:#000"></video>
+  <div style="margin-top:12px;display:flex;gap:12px">
+    <a id="downloadLink" class="btn-primary" style="display:inline-block;text-align:center;flex:1;padding:12px" download>MP4 다운로드</a>
+  </div>
+</div>
+
+</div>
+
+<script>
+let currentTaskId = null;
+let selectedShot = null;
+let generationLat = null;
+let generationLng = null;
+
+function showStatus(elId, msg, type) {
+  const el = document.getElementById(elId);
+  el.innerHTML = `<div class="status-msg status-${type}">${msg}</div>`;
+}
+
+function updateSliderLabel(name, unit) {
+  const slider = document.getElementById('slider' + name);
+  document.getElementById('val' + name).textContent = slider.value + unit;
+}
+
+async function validateKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) { showStatus('keyStatus', 'API 키를 입력하세요.', 'err'); return; }
+
+  document.getElementById('btnValidate').disabled = true;
+  document.getElementById('btnValidate').textContent = '검증 중...';
+
+  const res = await fetch('/api/validate-key', {
+    method: 'POST', body: JSON.stringify({ apiKey: key })
+  });
+  const data = await res.json();
+
+  document.getElementById('btnValidate').disabled = false;
+  document.getElementById('btnValidate').textContent = '검증';
+
+  if (data.ok) {
+    showStatus('keyStatus', data.message, 'ok');
+    document.getElementById('step-location').classList.remove('hidden');
+    document.getElementById('locationQuery').focus();
+  } else if (data.billing === false) {
+    let html = `<div class="status-msg status-err">
+      <strong>${data.error}</strong>
+      <div style="margin-top:10px;font-size:13px;line-height:1.8">
+        ${data.guide.map(s => `<div>${s}</div>`).join('')}
+      </div>
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+        <a href="${data.links.billing}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none">Billing 설정</a>
+        <a href="${data.links.api_library}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none">Map Tiles API 활성화</a>
+        <a href="${data.links.credentials}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none">API 키 관리</a>
+      </div>
+    </div>`;
+    document.getElementById('keyStatus').innerHTML = html;
+  } else {
+    showStatus('keyStatus', data.error, 'err');
+  }
+}
+
+async function startGeneration() {
+  const query = document.getElementById('locationQuery').value.trim();
+  if (!query) { showStatus('locationStatus', '위치를 입력하세요.', 'err'); return; }
+
+  document.getElementById('btnGenerate').disabled = true;
+  showStatus('locationStatus', '', 'info');
+
+  const geoRes = await fetch('/api/geocode', {
+    method: 'POST', body: JSON.stringify({ query })
+  });
+  const geoData = await geoRes.json();
+
+  if (!geoData.ok) {
+    showStatus('locationStatus', geoData.error, 'err');
+    document.getElementById('btnGenerate').disabled = false;
+    return;
+  }
+
+  showStatus('locationStatus', `${geoData.display} (${geoData.lat.toFixed(6)}, ${geoData.lng.toFixed(6)})`, 'ok');
+  generationLat = geoData.lat;
+  generationLng = geoData.lng;
+
+  const numShots = document.getElementById('numShots').value;
+  const genRes = await fetch('/api/generate', {
+    method: 'POST', body: JSON.stringify({
+      lat: geoData.lat, lng: geoData.lng, numShots,
+      duration_sec: +document.getElementById('prevDuration').value,
+      resolution: document.getElementById('prevResolution').value,
+      texture: document.getElementById('prevTexture').value,
+    })
+  });
+  const genData = await genRes.json();
+
+  if (!genData.ok) {
+    showStatus('locationStatus', genData.error, 'err');
+    document.getElementById('btnGenerate').disabled = false;
+    return;
+  }
+
+  currentTaskId = genData.taskId;
+  document.getElementById('progressArea').classList.remove('hidden');
+  pollTask(currentTaskId, 'progressFill', 'progressText', onPreviewsDone);
+}
+
+function pollTask(taskId, fillId, textId, onDone) {
+  const interval = setInterval(async () => {
+    const res = await fetch(`/api/task/${taskId}`);
+    const data = await res.json();
+    if (!data.ok) { clearInterval(interval); return; }
+
+    const pct = data.total > 0 ? Math.round((data.videos.length / data.total) * 100) : 0;
+    document.getElementById(fillId).style.width = pct + '%';
+
+    if (data.status === 'running') {
+      document.getElementById(textId).textContent =
+        `렌더링 중... ${data.current}/${data.total} — ${data.current_name}`;
+    } else if (data.status === 'done') {
+      clearInterval(interval);
+      document.getElementById(fillId).style.width = '100%';
+      document.getElementById(textId).textContent = `완료! (${data.videos.length}개 생성)`;
+      onDone(data);
+    } else if (data.status === 'error') {
+      clearInterval(interval);
+      document.getElementById(textId).textContent = `오류: ${data.error}`;
+    }
+  }, 3000);
+}
+
+function onPreviewsDone(data) {
+  document.getElementById('btnGenerate').disabled = false;
+  document.getElementById('step-preview').classList.remove('hidden');
+
+  const grid = document.getElementById('videoGrid');
+  grid.innerHTML = '';
+
+  data.videos.forEach((v, idx) => {
+    const rec = v.analysis?.recommendation || {};
+    const motion = v.analysis?.motion || {};
+    const card = document.createElement('div');
+    card.className = 'video-card';
+    card.dataset.idx = idx;
+    card.innerHTML = `
+      <video src="${v.video_url}" muted loop preload="metadata"
+             onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0"></video>
+      <div class="info">
+        <h4>${v.title}</h4>
+        <p>${v.style}</p>
+        <div class="meta-badges">
+          <span class="badge badge-blue">ALT ${motion.avg_altitude_m?.toFixed(0) || '?'}m</span>
+          <span class="badge badge-orange">SPD ${motion.avg_speed_mps?.toFixed(1) || '?'} m/s</span>
+          <span class="badge badge-green">${(rec.recommended_platform || 'N/A').toUpperCase()}</span>
+        </div>
+      </div>
+    `;
+    card.onclick = () => selectVideo(idx, data.videos);
+    grid.appendChild(card);
+  });
+}
+
+function selectVideo(idx, videos) {
+  document.querySelectorAll('.video-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.video-card')[idx]?.classList.add('selected');
+
+  selectedShot = videos[idx];
+  const v = document.getElementById('selectedVideo');
+  v.src = selectedShot.video_url;
+  v.play();
+
+  const motion = selectedShot.analysis?.motion || {};
+  const kf = selectedShot.keyframes;
+  if (kf && kf.length > 0) {
+    document.getElementById('sliderAlt').value = kf[0].alt_m;
+    document.getElementById('valAlt').textContent = kf[0].alt_m.toFixed(0) + 'm';
+    document.getElementById('sliderHeading').value = kf[0].heading_deg;
+    document.getElementById('valHeading').textContent = kf[0].heading_deg.toFixed(0) + '°';
+    document.getElementById('sliderTilt').value = -5;
+    document.getElementById('valTilt').textContent = '-5°';
+  }
+
+  document.getElementById('step-editor').classList.remove('hidden');
+  document.getElementById('step-editor').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function regenerate() {
+  if (!selectedShot || generationLat === null) return;
+
+  document.getElementById('btnRegenerate').disabled = true;
+  document.getElementById('regenProgress').classList.remove('hidden');
+  document.getElementById('regenFill').style.width = '0%';
+  document.getElementById('step-result').classList.add('hidden');
+
+  const body = {
+    lat: generationLat,
+    lng: generationLng,
+    alt_m: +document.getElementById('sliderAlt').value,
+    heading_deg: +document.getElementById('sliderHeading').value,
+    tilt_deg: +document.getElementById('sliderTilt').value,
+    speed_factor: +document.getElementById('sliderSpeed').value,
+    orbit_radius_m: +document.getElementById('sliderRadius').value,
+    sweep_deg: +document.getElementById('sliderSweep').value,
+    resolution: document.getElementById('genResolution').value,
+    texture: document.getElementById('genTexture').value,
+    duration_sec: +document.getElementById('genDuration').value,
+  };
+
+  const res = await fetch('/api/regenerate', {
+    method: 'POST', body: JSON.stringify(body)
+  });
+  const data = await res.json();
+
+  if (!data.ok) {
+    showStatus('regenStatus', data.error, 'err');
+    document.getElementById('btnRegenerate').disabled = false;
+    return;
+  }
+
+  pollTask(data.taskId, 'regenFill', 'regenText', (taskData) => {
+    document.getElementById('btnRegenerate').disabled = false;
+    const v = taskData.videos[0];
+    if (v) {
+      document.getElementById('step-result').classList.remove('hidden');
+      const finalVid = document.getElementById('finalVideo');
+      finalVid.src = v.video_url;
+      finalVid.play();
+      const dl = document.getElementById('downloadLink');
+      dl.href = v.video_url;
+      dl.download = 'cinematic_' + document.getElementById('genResolution').value + '.mp4';
+      document.getElementById('step-result').scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+}
+
+// Auto-load key from .env if present
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = localStorage.getItem('aerial_api_key');
+  if (saved) {
+    document.getElementById('apiKey').value = saved;
+  }
+});
+document.getElementById('apiKey').addEventListener('change', function() {
+  localStorage.setItem('aerial_api_key', this.value.trim());
+});
+</script>
+</body>
+</html>
