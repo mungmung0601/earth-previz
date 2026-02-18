@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cinematic Viewer</title>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.126/Build/Cesium/Cesium.js"></script>
+    <link
+      href="https://cesium.com/downloads/cesiumjs/releases/1.126/Build/Cesium/Widgets/widgets.css"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body,
+      #app {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      let viewer = null;
+      let tileset = null;
+
+      function assertReady() {
+        if (!viewer) {
+          throw new Error("Viewer is not initialized.");
+        }
+      }
+
+      function waitForTiles(timeoutMs) {
+        return new Promise((resolve) => {
+          const start = Date.now();
+          function poll() {
+            viewer.scene.requestRender();
+            const pending = tileset ? tileset._statistics.numberOfPendingRequests : 0;
+            const tilesReady = tileset ? tileset.tilesLoaded : false;
+            if (tilesReady || pending === 0 || Date.now() - start > timeoutMs) {
+              resolve();
+            } else {
+              setTimeout(poll, 200);
+            }
+          }
+          poll();
+        });
+      }
+
+      window.bootRenderer = async function bootRenderer(cfg) {
+        if (!cfg || !cfg.googleApiKey) {
+          throw new Error("googleApiKey is required.");
+        }
+
+        viewer = new Cesium.Viewer("app", {
+          baseLayer: false,
+          baseLayerPicker: false,
+          geocoder: false,
+          homeButton: false,
+          sceneModePicker: false,
+          navigationHelpButton: false,
+          animation: false,
+          timeline: false,
+          infoBox: false,
+          selectionIndicator: false,
+          requestRenderMode: true,
+          shouldAnimate: false,
+        });
+
+        viewer.scene.globe.show = false;
+
+        const url = `https://tile.googleapis.com/v1/3dtiles/root.json?key=${cfg.googleApiKey}`;
+        tileset = await Cesium.Cesium3DTileset.fromUrl(url, {
+          showCreditsOnScreen: true,
+        });
+        viewer.scene.primitives.add(tileset);
+        viewer.scene.requestRender();
+
+        if (cfg.initialCamera) {
+          window.setCameraState(cfg.initialCamera);
+        }
+
+        await waitForTiles(8000);
+      };
+
+      window.setCameraState = function setCameraState(state) {
+        assertReady();
+        const destination = Cesium.Cartesian3.fromDegrees(
+          state.lng,
+          state.lat,
+          state.alt_m
+        );
+        viewer.camera.setView({
+          destination,
+          orientation: {
+            heading: Cesium.Math.toRadians(state.heading_deg),
+            pitch: Cesium.Math.toRadians(-state.tilt_deg),
+            roll: 0.0,
+          },
+        });
+        viewer.scene.requestRender();
+      };
+
+      window.renderOnce = async function renderOnce() {
+        assertReady();
+        viewer.scene.requestRender();
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        await waitForTiles(3000);
+      };
+    </script>
+  </body>
+</html>
