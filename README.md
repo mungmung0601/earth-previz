@@ -4,6 +4,20 @@
 
 Google Photorealistic 3D Tiles + CesiumJS based. Specialized tool for drone/helicopter shooting pre-visualization.
 
+## Screenshots
+
+### Step 1 — API Key Setup
+![API Key Setup](docs/step1_api_key.png)
+
+### Step 2 — Location + Generation Settings
+![Generation Settings](docs/step2_generation.png)
+
+### Step 3 — Preview Grid
+![Preview Grid](docs/step3_preview.png)
+
+### Step 4 — Camera Editor + Render Options
+![Camera Editor](docs/step4_editor.png)
+
 ## Key Features
 
 - Address or coordinate input → Automatically generate 5~10 diverse aerial shots
