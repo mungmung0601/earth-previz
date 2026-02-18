@@ -74,36 +74,36 @@ def recommend_platform(motion: dict) -> dict:
 
     if max_alt <= 120:
         drone_score += 3
-        reasons.append("최대 고도가 낮아 드론 운용 범위에 적합합니다.")
+        reasons.append("Maximum altitude is low, suitable for drone operation range.")
     elif max_alt <= 220:
         drone_score += 1
         heli_score += 1
-        reasons.append("중간 고도라 드론/헬기 모두 가능성이 있습니다.")
+        reasons.append("Medium altitude; both drone and helicopter are viable.")
     else:
         heli_score += 3
-        reasons.append("최대 고도가 높아 헬리콥터가 안정적입니다.")
+        reasons.append("Maximum altitude is high; helicopter is more stable.")
 
     if max_speed <= 10:
         drone_score += 3
-        reasons.append("최대 속도가 낮아 드론 워킹샷에 유리합니다.")
+        reasons.append("Maximum speed is low, favorable for drone walking shots.")
     elif max_speed <= 18:
         drone_score += 1
         heli_score += 1
-        reasons.append("속도 요구가 중간 수준입니다.")
+        reasons.append("Speed requirements are at a moderate level.")
     else:
         heli_score += 3
-        reasons.append("속도 요구가 커 헬리콥터가 더 자연스럽습니다.")
+        reasons.append("High speed requirements; helicopter is more natural.")
 
     if avg_radius <= 500:
         drone_score += 2
-        reasons.append("평균 반경이 좁아 드론 근접 무빙에 적합합니다.")
+        reasons.append("Average radius is small, suitable for drone close-up movement.")
     elif avg_radius <= 1_000:
         drone_score += 1
         heli_score += 1
-        reasons.append("평균 반경이 중간 규모입니다.")
+        reasons.append("Average radius is at a moderate scale.")
     else:
         heli_score += 2
-        reasons.append("평균 반경이 넓어 헬리콥터가 유리합니다.")
+        reasons.append("Average radius is large; helicopter is more advantageous.")
 
     if heli_score > drone_score:
         platform = "helicopter"

@@ -110,12 +110,12 @@ async def _render_shot_async(
         except PlaywrightError as exc:
             await browser.close()
             console_tail = "\n".join(console_messages[-8:])
-            extra = f"\n브라우저 콘솔:\n{console_tail}" if console_tail else ""
+            extra = f"\nBrowser console:\n{console_tail}" if console_tail else ""
             raise RuntimeError(
-                "Cesium/Google 3D Tiles 초기화 실패. "
-                "API 키 유효성, Map Tiles API 활성화, 결제(Billing) 활성화, "
-                "API 키 제한(referrer/IP) 설정을 확인하세요.\n"
-                f"원본 오류: {exc}{extra}"
+                "Cesium/Google 3D Tiles initialization failed. "
+                "Check API key validity, Map Tiles API enabled, billing enabled, "
+                "and API key restrictions (referrer/IP).\n"
+                f"Original error: {exc}{extra}"
             ) from exc
 
         await page.wait_for_timeout(1_000)
@@ -139,12 +139,12 @@ def render_shot_frames(
     viewer_html_path: Path | None = None,
 ) -> int:
     if not options.google_api_key:
-        raise ValueError("Google Maps API 키가 필요합니다. --google-api-key 또는 GOOGLE_MAPS_API_KEY를 설정하세요.")
+        raise ValueError("Google Maps API key is required. Set --google-api-key or GOOGLE_MAPS_API_KEY.")
 
     if viewer_html_path is None:
         viewer_html_path = Path(__file__).resolve().parent / "web" / "viewer.html"
 
     if not viewer_html_path.exists():
-        raise FileNotFoundError(f"viewer HTML 파일이 없습니다: {viewer_html_path}")
+        raise FileNotFoundError(f"Viewer HTML file not found: {viewer_html_path}")
 
     return asyncio.run(_render_shot_async(shot, frame_dir, options, viewer_html_path))

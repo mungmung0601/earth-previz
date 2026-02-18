@@ -55,9 +55,9 @@ def _google_geocode(query: str, api_key: str) -> tuple[float, float, str] | None
 
 
 def geocode(query: str, google_api_key: str | None = None) -> tuple[float, float, str]:
-    """장소 이름/주소를 위도, 경도로 변환. (lat, lng, display_name) 반환.
+    """Convert place name/address to latitude and longitude. Returns (lat, lng, display_name).
 
-    Nominatim을 먼저 시도하고, 실패 시 Google Geocoding API를 사용.
+    Tries Nominatim first; falls back to Google Geocoding API on failure.
     """
     result = _nominatim(query)
     if result:
@@ -70,7 +70,7 @@ def geocode(query: str, google_api_key: str | None = None) -> tuple[float, float
             return result
 
     raise ValueError(
-        f"장소를 찾을 수 없습니다: '{query}'\n"
-        "팁: 더 일반적인 이름이나 주소로 시도해보세요. "
-        "(예: 'Times Square New York', '서울시청')"
+        f"Place not found: '{query}'\n"
+        "Tip: Try a more common name or address "
+        "(e.g., 'Times Square New York', 'Seoul City Hall')."
     )
