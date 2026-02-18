@@ -71,10 +71,10 @@ def export_kml(
     *,
     fps: int = 2,
 ) -> None:
-    """ShotPlan을 KML Tour 파일로 내보내기.
+    """Export ShotPlan as a KML Tour file.
 
-    fps가 낮을수록 파일이 작고 부드러운 투어가 됩니다 (기본 2fps).
-    Earth Studio / Google Earth에서 불러올 수 있습니다.
+    Lower fps results in smaller files and smoother tours (default 2fps).
+    Can be imported into Earth Studio / Google Earth.
     """
     GX = "http://www.google.com/kml/ext/2.2"
     KML_NS = "http://www.opengis.net/kml/2.2"

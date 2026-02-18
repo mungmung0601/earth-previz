@@ -14,11 +14,11 @@ def encode_frames_to_mp4(
 ) -> None:
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
-        raise RuntimeError("ffmpeg를 찾을 수 없습니다. 시스템에 ffmpeg를 설치하세요.")
+        raise RuntimeError("ffmpeg not found. Please install ffmpeg on your system.")
 
     codec_map = {"h264": "libx264", "h265": "libx265"}
     if codec not in codec_map:
-        raise ValueError("codec는 h264 또는 h265만 지원합니다.")
+        raise ValueError("Only h264 or h265 codecs are supported.")
 
     input_pattern = frame_dir / "frame_%06d.png"
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -44,7 +44,7 @@ def encode_frames_to_mp4(
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError(
-            "ffmpeg 인코딩에 실패했습니다.\n"
+            "ffmpeg encoding failed.\n"
             f"command: {' '.join(command)}\n"
             f"stderr:\n{result.stderr}"
         )

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -77,30 +77,30 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 
 <header>
   <h1>Aerial Cinematic Bot</h1>
-  <p>좌표 또는 주소를 입력하면 자동으로 에이리얼 시네마틱 영상을 생성합니다</p>
+  <p>Enter coordinates or an address to automatically generate aerial cinematic videos</p>
 </header>
 
 <!-- STEP 1: API Key -->
 <div class="card" id="step-key">
-  <h2><span class="num">1</span> API 키 설정</h2>
+  <h2><span class="num">1</span> API Key Setup</h2>
   <label for="apiKey">Google Maps API Key</label>
   <div class="input-row">
     <input type="text" id="apiKey" placeholder="AIzaSy...">
-    <button class="btn-primary" id="btnValidate" onclick="validateKey()">검증</button>
+    <button class="btn-primary" id="btnValidate" onclick="validateKey()">Validate</button>
   </div>
   <div id="keyStatus"></div>
 </div>
 
 <!-- STEP 2: Location -->
 <div class="card hidden" id="step-location">
-  <h2><span class="num">2</span> 위치 입력 + 생성 설정</h2>
-  <label for="locationQuery">주소 또는 좌표 (예: "1472 Broadway, New York" 또는 "40.756, -73.986")</label>
+  <h2><span class="num">2</span> Location + Generation Settings</h2>
+  <label for="locationQuery">Address or Coordinates (e.g. "1472 Broadway, New York" or "40.756, -73.986")</label>
   <div class="input-row">
-    <input type="text" id="locationQuery" placeholder="주소, 건물 이름, 또는 위도,경도">
+    <input type="text" id="locationQuery" placeholder="Address, building name, or lat,lng">
   </div>
   <div class="gen-options" style="margin-top:14px">
     <div>
-      <label for="numShots">샷 수</label>
+      <label for="numShots">Number of Shots</label>
       <select id="numShots">
         <option value="3">3</option>
         <option value="5" selected>5</option>
@@ -109,11 +109,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       </select>
     </div>
     <div>
-      <label for="prevDuration">영상 길이 (초)</label>
+      <label for="prevDuration">Duration (sec)</label>
       <input type="number" id="prevDuration" value="7" min="3" max="60">
     </div>
     <div>
-      <label for="prevResolution">해상도</label>
+      <label for="prevResolution">Resolution</label>
       <select id="prevResolution">
         <option value="270p" selected>270p (480×270)</option>
         <option value="480p">480p (854×480)</option>
@@ -123,7 +123,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       </select>
     </div>
     <div>
-      <label for="prevTexture">텍스처 퀄리티</label>
+      <label for="prevTexture">Texture Quality</label>
       <select id="prevTexture">
         <option value="low">Low</option>
         <option value="medium" selected>Medium</option>
@@ -132,24 +132,24 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       </select>
     </div>
   </div>
-  <button class="btn-primary" id="btnGenerate" onclick="startGeneration()" style="width:100%;margin-top:14px;padding:12px;font-size:15px">프리뷰 생성</button>
+  <button class="btn-primary" id="btnGenerate" onclick="startGeneration()" style="width:100%;margin-top:14px;padding:12px;font-size:15px">Generate Previews</button>
   <div id="locationStatus"></div>
   <div id="progressArea" class="hidden" style="margin-top:16px">
     <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
-    <div class="progress-text" id="progressText">준비 중...</div>
+    <div class="progress-text" id="progressText">Preparing...</div>
   </div>
 </div>
 
 <!-- STEP 3: Video Previews -->
 <div class="card hidden" id="step-preview">
-  <h2><span class="num">3</span> 프리뷰 선택</h2>
-  <p style="font-size:13px;color:var(--text2);margin-bottom:8px">영상을 클릭하여 선택하세요. 선택한 영상의 카메라를 편집할 수 있습니다.</p>
+  <h2><span class="num">3</span> Select Preview</h2>
+  <p style="font-size:13px;color:var(--text2);margin-bottom:8px">Click a video to select it. You can edit the camera of the selected video.</p>
   <div class="video-grid" id="videoGrid"></div>
 </div>
 
 <!-- STEP 4: Editor -->
 <div class="card hidden" id="step-editor">
-  <h2><span class="num">4</span> 카메라 편집</h2>
+  <h2><span class="num">4</span> Camera Editor</h2>
   <div id="selectedVideoContainer" style="margin-bottom:16px">
     <video id="selectedVideo" controls muted loop style="width:100%;max-height:360px;background:#000;border-radius:8px"></video>
   </div>
@@ -157,38 +157,38 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div>
       <div class="slider-group">
-        <label>고도 (Altitude) <span id="valAlt">500m</span></label>
+        <label>Altitude <span id="valAlt">500m</span></label>
         <input type="range" id="sliderAlt" min="100" max="5000" value="500" step="50" oninput="updateSliderLabel('Alt','m')">
       </div>
       <div class="slider-group">
-        <label>오비트 반경 <span id="valRadius">850m</span></label>
+        <label>Orbit Radius <span id="valRadius">850m</span></label>
         <input type="range" id="sliderRadius" min="200" max="5000" value="850" step="50" oninput="updateSliderLabel('Radius','m')">
       </div>
       <div class="slider-group">
-        <label>시작 방위각 (Heading) <span id="valHeading">0°</span></label>
+        <label>Start Azimuth (Heading) <span id="valHeading">0°</span></label>
         <input type="range" id="sliderHeading" min="0" max="360" value="0" step="5" oninput="updateSliderLabel('Heading','°')">
       </div>
     </div>
     <div>
       <div class="slider-group">
-        <label>에이밍 틸트 (Tilt Offset) <span id="valTilt">-5°</span></label>
+        <label>Aiming Tilt (Tilt Offset) <span id="valTilt">-5°</span></label>
         <input type="range" id="sliderTilt" min="-20" max="20" value="-5" step="1" oninput="updateSliderLabel('Tilt','°')">
       </div>
       <div class="slider-group">
-        <label>회전 범위 (Sweep) <span id="valSweep">45°</span></label>
+        <label>Sweep Range <span id="valSweep">45°</span></label>
         <input type="range" id="sliderSweep" min="10" max="360" value="45" step="5" oninput="updateSliderLabel('Sweep','°')">
       </div>
       <div class="slider-group">
-        <label>속도 배수 <span id="valSpeed">1.0x</span></label>
+        <label>Speed Multiplier <span id="valSpeed">1.0x</span></label>
         <input type="range" id="sliderSpeed" min="0.2" max="3.0" value="1.0" step="0.1" oninput="document.getElementById('valSpeed').textContent=this.value+'x'">
       </div>
     </div>
   </div>
 
-  <h3 style="font-size:15px;margin:20px 0 12px">렌더링 옵션</h3>
+  <h3 style="font-size:15px;margin:20px 0 12px">Render Options</h3>
   <div class="gen-options">
     <div>
-      <label for="genResolution">해상도</label>
+      <label for="genResolution">Resolution</label>
       <select id="genResolution">
         <option value="480p">480p (854×480)</option>
         <option value="720p">720p (1280×720)</option>
@@ -198,7 +198,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       </select>
     </div>
     <div>
-      <label for="genTexture">텍스처 퀄리티</label>
+      <label for="genTexture">Texture Quality</label>
       <select id="genTexture">
         <option value="low">Low</option>
         <option value="medium" selected>Medium</option>
@@ -207,7 +207,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       </select>
     </div>
     <div>
-      <label for="genDuration">영상 길이 (초)</label>
+      <label for="genDuration">Duration (sec)</label>
       <input type="number" id="genDuration" value="7" min="3" max="60">
     </div>
   </div>
@@ -216,16 +216,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   <div id="regenStatus"></div>
   <div id="regenProgress" class="hidden" style="margin-top:12px">
     <div class="progress-bar"><div class="fill" id="regenFill" style="width:0%"></div></div>
-    <div class="progress-text" id="regenText">렌더링 중...</div>
+    <div class="progress-text" id="regenText">Rendering...</div>
   </div>
 </div>
 
 <!-- STEP 5: Final Result -->
 <div class="card hidden" id="step-result">
-  <h2><span class="num">5</span> 최종 결과</h2>
+  <h2><span class="num">5</span> Final Result</h2>
   <video id="finalVideo" controls style="width:100%;border-radius:8px;background:#000"></video>
   <div style="margin-top:12px;display:flex;gap:12px">
-    <a id="downloadLink" class="btn-primary" style="display:inline-block;text-align:center;flex:1;padding:12px" download>MP4 다운로드</a>
+    <a id="downloadLink" class="btn-primary" style="display:inline-block;text-align:center;flex:1;padding:12px" download>Download MP4</a>
   </div>
 </div>
 
@@ -249,10 +249,10 @@ function updateSliderLabel(name, unit) {
 
 async function validateKey() {
   const key = document.getElementById('apiKey').value.trim();
-  if (!key) { showStatus('keyStatus', 'API 키를 입력하세요.', 'err'); return; }
+  if (!key) { showStatus('keyStatus', 'Please enter your API key.', 'err'); return; }
 
   document.getElementById('btnValidate').disabled = true;
-  document.getElementById('btnValidate').textContent = '검증 중...';
+  document.getElementById('btnValidate').textContent = 'Validating...';
 
   const res = await fetch('/api/validate-key', {
     method: 'POST', body: JSON.stringify({ apiKey: key })
@@ -260,7 +260,7 @@ async function validateKey() {
   const data = await res.json();
 
   document.getElementById('btnValidate').disabled = false;
-  document.getElementById('btnValidate').textContent = '검증';
+  document.getElementById('btnValidate').textContent = 'Validate';
 
   if (data.ok) {
     showStatus('keyStatus', data.message, 'ok');
@@ -273,9 +273,9 @@ async function validateKey() {
         ${data.guide.map(s => `<div>${s}</div>`).join('')}
       </div>
       <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
-        <a href="${data.links.billing}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none">Billing 설정</a>
-        <a href="${data.links.api_library}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none">Map Tiles API 활성화</a>
-        <a href="${data.links.credentials}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none">API 키 관리</a>
+        <a href="${data.links.billing}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none">Billing Setup</a>
+        <a href="${data.links.api_library}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none">Enable Map Tiles API</a>
+        <a href="${data.links.credentials}" target="_blank" class="btn-sm btn-primary" style="text-decoration:none">API Key Management</a>
       </div>
     </div>`;
     document.getElementById('keyStatus').innerHTML = html;
@@ -286,7 +286,7 @@ async function validateKey() {
 
 async function startGeneration() {
   const query = document.getElementById('locationQuery').value.trim();
-  if (!query) { showStatus('locationStatus', '위치를 입력하세요.', 'err'); return; }
+  if (!query) { showStatus('locationStatus', 'Please enter a location.', 'err'); return; }
 
   document.getElementById('btnGenerate').disabled = true;
   showStatus('locationStatus', '', 'info');
@@ -339,15 +339,15 @@ function pollTask(taskId, fillId, textId, onDone) {
 
     if (data.status === 'running') {
       document.getElementById(textId).textContent =
-        `렌더링 중... ${data.current}/${data.total} — ${data.current_name}`;
+        `Rendering... ${data.current}/${data.total} — ${data.current_name}`;
     } else if (data.status === 'done') {
       clearInterval(interval);
       document.getElementById(fillId).style.width = '100%';
-      document.getElementById(textId).textContent = `완료! (${data.videos.length}개 생성)`;
+      document.getElementById(textId).textContent = `Done! (${data.videos.length} generated)`;
       onDone(data);
     } else if (data.status === 'error') {
       clearInterval(interval);
-      document.getElementById(textId).textContent = `오류: ${data.error}`;
+      document.getElementById(textId).textContent = `Error: ${data.error}`;
     }
   }, 3000);
 }

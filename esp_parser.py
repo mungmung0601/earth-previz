@@ -108,13 +108,13 @@ def parse_esp(
     target_lat: float | None = None,
     target_lng: float | None = None,
 ) -> tuple[ShotPlan, dict]:
-    """ESP/JSON 파일을 파싱하여 ShotPlan과 메타데이터를 반환."""
+    """Parse an ESP/JSON file and return a ShotPlan with metadata."""
     filepath = Path(filepath)
     data = json.loads(filepath.read_text(encoding="utf-8"))
 
     camera_frames = data.get("cameraFrames", [])
     if not camera_frames:
-        raise ValueError(f"cameraFrames가 없습니다: {filepath}")
+        raise ValueError(f"No cameraFrames found in: {filepath}")
 
     trackpoints = _extract_trackpoints(data)
 
@@ -129,8 +129,8 @@ def parse_esp(
     scale = _detect_ecef_scale(camera_frames[0]["position"])
     if scale is None:
         raise ValueError(
-            "cameraFrames의 position 좌표를 ECEF로 해석할 수 없습니다. "
-            "Earth Studio 3D Camera Export JSON 파일인지 확인하세요."
+            "Unable to interpret cameraFrames position coordinates as ECEF. "
+            "Please verify this is an Earth Studio 3D Camera Export JSON file."
         )
 
     all_geodetic: list[tuple[float, float, float]] = []
@@ -178,7 +178,7 @@ def parse_esp(
         target_lat=target_lat,
         target_lng=target_lng,
         keyframes=keyframes,
-        notes=f"Earth Studio 프로젝트에서 가져온 카메라 경로. 원본 프레임 수: {total_frames}",
+        notes=f"Camera path imported from Earth Studio project. Original frame count: {total_frames}",
     )
 
     meta = {

@@ -41,7 +41,7 @@ def _look_at_tilt_deg(
     cam_lat: float, cam_lng: float, cam_alt: float,
     target_lat: float, target_lng: float,
 ) -> float:
-    """카메라에서 타겟 좌표를 정확히 프레임 중앙에 놓기 위한 tilt 각도."""
+    """Tilt angle to place the target coordinates precisely at the center of the frame from the camera."""
     ground_dist = _ground_distance_m(cam_lat, cam_lng, target_lat, target_lng)
     return math.degrees(math.atan2(cam_alt, max(ground_dist, 1.0)))
 
@@ -197,7 +197,7 @@ def generate_shot_plans(
             "aerial_slow_orbit_close",
             "Aerial Slow Orbit (Close)",
             "helicopter",
-            "중고도 근접 오비트. 빌딩이 잘리지 않는 중간 거리.",
+            "Mid-altitude close orbit. Medium distance to avoid building clipping.",
             lambda: _orbit_keyframes(
                 target_lat,
                 target_lng,
@@ -214,7 +214,7 @@ def generate_shot_plans(
             "aerial_slow_orbit_wide",
             "Aerial Slow Orbit (Wide)",
             "helicopter",
-            "고고도 와이드 오비트. 도시 스케일 스크린세이버.",
+            "High-altitude wide orbit. City-scale screensaver.",
             lambda: _orbit_keyframes(
                 target_lat,
                 target_lng,
@@ -231,7 +231,7 @@ def generate_shot_plans(
             "aerial_high_orbit",
             "Aerial High Orbit",
             "helicopter",
-            "중고도 오비트. close와 기존 high의 중간 거리.",
+            "Mid-altitude orbit. Intermediate distance between close and high.",
             lambda: _orbit_keyframes(
                 target_lat,
                 target_lng,
@@ -248,7 +248,7 @@ def generate_shot_plans(
             "aerial_grand_panorama",
             "Aerial Grand Panorama",
             "helicopter",
-            "초고도 대형 아크. 지형 전체를 조망.",
+            "Ultra-high altitude large arc. Panoramic view of the entire terrain.",
             lambda: _orbit_keyframes(
                 target_lat,
                 target_lng,
@@ -265,7 +265,7 @@ def generate_shot_plans(
             "aerial_flyby_north",
             "Aerial Flyby (North→South)",
             "helicopter",
-            "직선 플라이바이. 빌딩 옆을 스쳐 지나가는 에이리얼 샷 (전방 주시).",
+            "Straight flyby. Aerial shot passing alongside the building (forward-looking).",
             lambda: _dolly_keyframes(
                 target_lat,
                 target_lng,
@@ -285,7 +285,7 @@ def generate_shot_plans(
             "aerial_flythrough_east",
             "Aerial Flythrough (East→West)",
             "helicopter",
-            "플라이스루. 빌딩을 화면 정중앙에 두고 옆으로 통과.",
+            "Flythrough. Passes laterally with the building centered on screen.",
             lambda: _dolly_keyframes(
                 target_lat,
                 target_lng,
@@ -304,7 +304,7 @@ def generate_shot_plans(
             "aerial_flyby_diagonal",
             "Aerial Flyby (Diagonal)",
             "helicopter",
-            "대각선 플라이바이. 빌딩 옆을 비스듬히 스쳐 지나감 (전방 주시).",
+            "Diagonal flyby. Passes diagonally alongside the building (forward-looking).",
             lambda: _dolly_keyframes(
                 target_lat,
                 target_lng,
@@ -324,7 +324,7 @@ def generate_shot_plans(
             "aerial_slow_descent",
             "Aerial Slow Descent Orbit",
             "helicopter",
-            "고도를 천천히 낮추며 오비트. 점점 가까워지는 느낌.",
+            "Orbit with slow altitude descent. Creates a sense of gradually approaching.",
             lambda: _orbit_keyframes(
                 target_lat,
                 target_lng,
@@ -341,7 +341,7 @@ def generate_shot_plans(
             "aerial_slow_ascent",
             "Aerial Slow Ascent Orbit",
             "helicopter",
-            "고도를 천천히 올리며 오비트. 점점 스케일이 커지는 느낌.",
+            "Orbit with slow altitude ascent. Creates a sense of expanding scale.",
             lambda: _orbit_keyframes(
                 target_lat,
                 target_lng,
@@ -358,7 +358,7 @@ def generate_shot_plans(
             "aerial_ultra_high",
             "Aerial Ultra High Overview",
             "helicopter",
-            "초고도 초광역 오비트. 지역 전체를 조망하는 스크린세이버.",
+            "Ultra-high altitude ultra-wide orbit. Screensaver overlooking the entire area.",
             lambda: _orbit_keyframes(
                 target_lat,
                 target_lng,

@@ -26,30 +26,30 @@ RESOLUTION_PRESETS = {
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="좌표 기반 시네마틱 프리비즈를 생성하고 MP4로 렌더링합니다."
+        description="Generate coordinate-based cinematic previz and render as MP4."
     )
-    parser.add_argument("--lat", type=float, default=None, help="대상 위도")
-    parser.add_argument("--lng", type=float, default=None, help="대상 경도")
-    parser.add_argument("--place", type=str, default=None, help="장소 이름/주소 (예: '맨하탄 H&M 빌딩')")
-    parser.add_argument("--esp", type=str, default=None, help="Earth Studio ESP/JSON 파일 경로")
-    parser.add_argument("--shots", type=int, default=10, help="생성할 샷 개수 (최대 10, ESP 모드에서는 무시)")
-    parser.add_argument("--duration-sec", type=int, default=300, help="샷당 길이(초), 기본 300초")
-    parser.add_argument("--fps", type=int, default=24, help="프레임레이트")
+    parser.add_argument("--lat", type=float, default=None, help="Target latitude")
+    parser.add_argument("--lng", type=float, default=None, help="Target longitude")
+    parser.add_argument("--place", type=str, default=None, help="Place name/address (e.g., 'Manhattan H&M Building')")
+    parser.add_argument("--esp", type=str, default=None, help="Earth Studio ESP/JSON file path")
+    parser.add_argument("--shots", type=int, default=10, help="Number of shots to generate (max 10, ignored in ESP mode)")
+    parser.add_argument("--duration-sec", type=int, default=300, help="Duration per shot (seconds), default 300s")
+    parser.add_argument("--fps", type=int, default=24, help="Frame rate")
     parser.add_argument(
         "--resolution",
         choices=list(RESOLUTION_PRESETS),
         default="720p",
-        help="렌더링 해상도",
+        help="Render resolution",
     )
     parser.add_argument(
         "--google-api-key",
         default=os.getenv("GOOGLE_MAPS_API_KEY", ""),
-        help="Google Maps Tile API 키 (없으면 환경변수 GOOGLE_MAPS_API_KEY 사용)",
+        help="Google Maps Tile API key (uses GOOGLE_MAPS_API_KEY env var if not provided)",
     )
-    parser.add_argument("--codec", choices=["h264", "h265"], default="h264", help="출력 코덱")
-    parser.add_argument("--output-dir", default="output", help="출력 루트 디렉터리")
-    parser.add_argument("--dry-run", action="store_true", help="메타데이터+ESP만 생성하고 렌더링은 생략")
-    parser.add_argument("--max-frames", type=int, default=None, help="테스트용 프레임 상한")
+    parser.add_argument("--codec", choices=["h264", "h265"], default="h264", help="Output codec")
+    parser.add_argument("--output-dir", default="output", help="Output root directory")
+    parser.add_argument("--dry-run", action="store_true", help="Generate metadata+ESP only, skip rendering")
+    parser.add_argument("--max-frames", type=int, default=None, help="Max frame limit for testing")
 
     ns = parser.parse_args()
     if ns.place:
@@ -57,10 +57,10 @@ def parse_args() -> argparse.Namespace:
         lat, lng, display_name = geocode(ns.place, google_api_key=ns.google_api_key)
         ns.lat = lat
         ns.lng = lng
-        print(f"[INFO] 장소 검색: '{ns.place}' → {display_name}")
-        print(f"[INFO] 좌표: {lat}, {lng}")
+        print(f"[INFO] Place lookup: '{ns.place}' → {display_name}")
+        print(f"[INFO] Coordinates: {lat}, {lng}")
     if ns.esp is None and (ns.lat is None or ns.lng is None):
-        parser.error("--lat/--lng, --place, 또는 --esp 중 하나는 필수입니다.")
+        parser.error("One of --lat/--lng, --place, or --esp is required.")
     return ns
 
 
@@ -84,7 +84,7 @@ def main() -> None:
         from esp_parser import parse_esp
 
         esp_path = Path(args.esp)
-        print(f"[INFO] ESP 파일 로드: {esp_path}")
+        print(f"[INFO] Loading ESP file: {esp_path}")
         shot, esp_meta = parse_esp(
             esp_path,
             fps=args.fps,
@@ -93,11 +93,11 @@ def main() -> None:
         )
         shot_plans = [shot]
         _safe_write_json(metadata_root / "esp_import_meta.json", esp_meta)
-        print(f"[INFO] ESP 가져오기 완료 — 프레임: {esp_meta['total_source_frames']}, "
-              f"타겟: ({esp_meta['target_lat']:.6f}, {esp_meta['target_lng']:.6f})")
+        print(f"[INFO] ESP import complete — frames: {esp_meta['total_source_frames']}, "
+              f"target: ({esp_meta['target_lat']:.6f}, {esp_meta['target_lng']:.6f})")
     else:
         if args.shots < 1 or args.shots > 10:
-            raise ValueError("--shots는 1~10 범위여야 합니다.")
+            raise ValueError("--shots must be in the range 1-10.")
         shot_plans = generate_shot_plans(
             target_lat=args.lat,
             target_lng=args.lng,
@@ -115,7 +115,7 @@ def main() -> None:
     jsx_root = run_dir / "jsx"
 
     for idx, shot in enumerate(shot_plans, start=1):
-        print(f"[{idx}/{len(shot_plans)}] {shot.shot_id} 분석 중...")
+        print(f"[{idx}/{len(shot_plans)}] Analyzing {shot.shot_id}...")
         analysis = build_shot_analysis(shot)
         analyses.append(analysis)
 
@@ -134,12 +134,12 @@ def main() -> None:
         rendered_frames = 0
 
         if args.dry_run:
-            print(f"  - dry-run: 렌더링 생략 ({shot.shot_id})")
+            print(f"  - dry-run: skipping render ({shot.shot_id})")
         else:
             from renderer import RenderOptions, render_shot_frames
 
             frame_dir = frames_root / shot.shot_id
-            print(f"  - 프레임 렌더링 시작...")
+            print(f"  - Starting frame rendering...")
             rendered_frames = render_shot_frames(
                 shot=shot,
                 frame_dir=frame_dir,
@@ -152,9 +152,9 @@ def main() -> None:
                     headless=True,
                 ),
             )
-            print(f"  - 인코딩 시작... ({rendered_frames} frames)")
+            print(f"  - Starting encoding... ({rendered_frames} frames)")
             encode_frames_to_mp4(frame_dir, video_path, fps=args.fps, codec=args.codec)
-            print(f"  - 완료: {video_path}")
+            print(f"  - Done: {video_path}")
             shutil.rmtree(frame_dir, ignore_errors=True)
 
         summary_rows.append(
@@ -201,7 +201,7 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(summary_rows)
 
-    print("[DONE] 생성 완료")
+    print("[DONE] Generation complete")
     print(f"  - summary: {metadata_root / 'summary.json'}")
     print(f"  - summary_csv: {csv_path}")
     print(f"  - kml: {kml_root}")

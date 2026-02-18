@@ -1,8 +1,8 @@
-"""After Effects용 JSX 카메라 스크립트 생성.
+"""Generate JSX camera script for After Effects.
 
-Earth Studio의 3D Camera Export와 동일한 형태의 JSX를 생성합니다.
-After Effects에서 File > Scripts > Run Script File... 로 실행하면
-카메라 키프레임과 Track Point가 자동 생성됩니다.
+Produces JSX in the same format as Earth Studio's 3D Camera Export.
+Run via File > Scripts > Run Script File... in After Effects
+to auto-generate camera keyframes and Track Points.
 """
 from __future__ import annotations
 
@@ -74,7 +74,7 @@ def export_jsx(
     width: int = 1920,
     height: int = 1080,
 ) -> None:
-    """ShotPlan을 After Effects 호환 JSX 카메라 스크립트로 내보내기."""
+    """Export ShotPlan as an After Effects compatible JSX camera script."""
     frames = _interpolate(shot.keyframes, fps)
     if not frames:
         return

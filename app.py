@@ -61,26 +61,26 @@ def validate_key():
     data = request.get_json(force=True)
     api_key = data.get("apiKey", "").strip()
     if not api_key:
-        return jsonify({"ok": False, "error": "API 키를 입력하세요."})
+        return jsonify({"ok": False, "error": "Please enter an API key."})
 
     test_url = f"https://tile.googleapis.com/v1/3dtiles/root.json?key={api_key}"
     try:
         resp = requests.get(test_url, timeout=10)
         if resp.status_code == 200:
             stored_api_key["key"] = api_key
-            return jsonify({"ok": True, "message": "API 키 유효 — 빌링이 정상적으로 연결되어 있습니다."})
+            return jsonify({"ok": True, "message": "API key valid — billing is properly connected."})
         body = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
         error_msg = body.get("error", {}).get("message", resp.text[:200])
         if resp.status_code == 403:
             return jsonify({
                 "ok": False,
                 "billing": False,
-                "error": "API 키가 거부되었습니다.",
+                "error": "API key was rejected.",
                 "guide": [
-                    "1. Google Cloud Console 접속 → console.cloud.google.com",
-                    "2. 결제(Billing) 메뉴에서 결제 계정 연결 확인",
-                    "3. API 및 서비스 → 라이브러리 → 'Map Tiles API' 검색 → 사용 설정",
-                    "4. API 키에 Map Tiles API 권한이 포함되어 있는지 확인",
+                    "1. Go to Google Cloud Console → console.cloud.google.com",
+                    "2. Verify billing account is linked under the Billing menu",
+                    "3. APIs & Services → Library → Search 'Map Tiles API' → Enable",
+                    "4. Verify that the API key includes Map Tiles API permission",
                 ],
                 "links": {
                     "billing": "https://console.cloud.google.com/billing",
@@ -88,9 +88,9 @@ def validate_key():
                     "credentials": "https://console.cloud.google.com/apis/credentials",
                 },
             })
-        return jsonify({"ok": False, "error": f"API 오류 ({resp.status_code}): {error_msg}"})
+        return jsonify({"ok": False, "error": f"API error ({resp.status_code}): {error_msg}"})
     except requests.RequestException as exc:
-        return jsonify({"ok": False, "error": f"네트워크 오류: {exc}"})
+        return jsonify({"ok": False, "error": f"Network error: {exc}"})
 
 
 # ─── API: Geocode ────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ def geocode_address():
     data = request.get_json(force=True)
     query = data.get("query", "").strip()
     if not query:
-        return jsonify({"ok": False, "error": "주소 또는 좌표를 입력하세요."})
+        return jsonify({"ok": False, "error": "Please enter an address or coordinates."})
 
     try:
         parts = [s.strip() for s in query.split(",")]
@@ -126,7 +126,7 @@ def _generate_previews(task_id: str, lat: float, lng: float, num_shots: int,
     api_key = stored_api_key.get("key", "")
     if not api_key:
         task["status"] = "error"
-        task["error"] = "API 키가 설정되지 않았습니다."
+        task["error"] = "API key is not set."
         return
 
     width, height = RESOLUTION_PRESETS.get(resolution, (480, 270))
@@ -198,7 +198,7 @@ def _encode_with_metadata(
     shot: ShotPlan, analysis: dict,
     fps: int = 24, codec: str = "h264",
 ):
-    """MP4 상단에 메타데이터 오버레이를 베이크하여 인코딩."""
+    """Encode with metadata overlay baked at the top of the MP4."""
     video_path.parent.mkdir(parents=True, exist_ok=True)
 
     rec = analysis.get("recommendation", {})
@@ -251,7 +251,7 @@ def start_generate():
     texture = data.get("texture", "medium")
 
     if lat is None or lng is None:
-        return jsonify({"ok": False, "error": "좌표가 필요합니다."})
+        return jsonify({"ok": False, "error": "Coordinates are required."})
 
     task_id = str(uuid.uuid4())[:8]
     tasks[task_id] = {
@@ -279,7 +279,7 @@ def start_generate():
 def get_task_status(task_id):
     task = tasks.get(task_id)
     if not task:
-        return jsonify({"ok": False, "error": "태스크를 찾을 수 없습니다."})
+        return jsonify({"ok": False, "error": "Task not found."})
     return jsonify({"ok": True, **task})
 
 
@@ -290,7 +290,7 @@ def regenerate_shot():
     data = request.get_json(force=True)
     api_key = stored_api_key.get("key", "")
     if not api_key:
-        return jsonify({"ok": False, "error": "API 키가 없습니다."})
+        return jsonify({"ok": False, "error": "API key is missing."})
 
     lat = data["lat"]
     lng = data["lng"]

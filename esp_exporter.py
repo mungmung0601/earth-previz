@@ -47,7 +47,7 @@ def _lerp_angle(a: float, b: float, t: float) -> float:
 
 
 def _interpolate_keyframes(keyframes: list[CameraKeyframe], fps: int) -> list[dict]:
-    """키프레임을 보간하여 프레임 단위 카메라 데이터를 생성."""
+    """Interpolate keyframes to generate per-frame camera data."""
     if not keyframes:
         return []
 
@@ -89,7 +89,7 @@ def export_esp(
     *,
     fps: int = 24,
 ) -> None:
-    """ShotPlan을 Earth Studio 호환 ESP(JSON) 파일로 내보내기."""
+    """Export ShotPlan as an Earth Studio compatible ESP (JSON) file."""
     camera_frames = _interpolate_keyframes(shot.keyframes, fps)
 
     target_ecef = _geodetic_to_ecef(shot.target_lat, shot.target_lng, 0.0)
