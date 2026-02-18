@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import shutil
 import subprocess
 from pathlib import Path
+
+from ffmpeg_path import get_ffmpeg
 
 
 def encode_frames_to_mp4(
@@ -12,9 +13,7 @@ def encode_frames_to_mp4(
     fps: int,
     codec: str = "h264",
 ) -> None:
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        raise RuntimeError("ffmpeg not found. Please install ffmpeg on your system.")
+    ffmpeg = get_ffmpeg()
 
     codec_map = {"h264": "libx264", "h265": "libx265"}
     if codec not in codec_map:

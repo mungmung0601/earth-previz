@@ -16,8 +16,9 @@ Google Photorealistic 3D Tiles + CesiumJS based. Specialized tool for drone/heli
 ## Requirements
 
 - **Python 3.9+**
-- **FFmpeg** (must be installed on your system)
 - **Google Maps Platform API Key** (Map Tiles API enabled + billing account required)
+
+> FFmpeg is automatically installed via pip (`imageio-ffmpeg`). No manual FFmpeg setup needed.
 
 ## Installation
 
@@ -35,19 +36,6 @@ python -m playwright install chromium
 # 4. (Optional) Create .env file
 cp .env.example .env
 # Open .env and enter your GOOGLE_MAPS_API_KEY
-```
-
-### FFmpeg Installation
-
-```bash
-# macOS
-brew install ffmpeg
-
-# Ubuntu/Debian
-sudo apt install ffmpeg
-
-# Windows (Chocolatey)
-choco install ffmpeg
 ```
 
 ## Running

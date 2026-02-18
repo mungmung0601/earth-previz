@@ -217,11 +217,13 @@ def _encode_with_metadata(
     overlay_text_escaped = overlay_text.replace(":", "\\:").replace("'", "\\'")
 
     import subprocess
+    from ffmpeg_path import get_ffmpeg
+    ffmpeg = get_ffmpeg()
     pattern = str(frame_dir / "frame_%06d.png")
     enc = "libx264" if codec == "h264" else "libx265"
 
     cmd = [
-        "ffmpeg", "-y",
+        ffmpeg, "-y",
         "-framerate", str(fps),
         "-i", pattern,
         "-vf", (
