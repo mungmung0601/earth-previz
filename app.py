@@ -229,9 +229,9 @@ def _encode_with_metadata(
         "-i", pattern,
         "-vf", (
             f"drawtext=text='{overlay_text_escaped}'"
-            f":fontsize=14:fontcolor=white"
-            f":borderw=2:bordercolor=black"
-            f":x=(w-text_w)/2:y=12"
+            f":fontsize=(h/30):fontcolor=white"
+            f":borderw=1:bordercolor=black@0.6"
+            f":x=(w-text_w)/2:y=(h/40)"
         ),
         "-c:v", enc,
         "-preset", "fast",
