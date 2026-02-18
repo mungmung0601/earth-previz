@@ -83,6 +83,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <!-- STEP 1: API Key -->
 <div class="card" id="step-key">
   <h2><span class="num">1</span> API Key Setup</h2>
+
+  <div style="background:#0d1d33;border:1px solid #1f6feb;border-radius:8px;padding:16px;margin-bottom:18px;font-size:13px;line-height:1.8;color:var(--text2)">
+    <strong style="color:var(--accent);font-size:14px">How to get a Google Maps API Key</strong>
+    <ol style="margin:10px 0 0 18px;padding:0">
+      <li>Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+      <li>Create a new project (or select existing one)</li>
+      <li>Enable <a href="https://console.cloud.google.com/apis/library/tile.googleapis.com" target="_blank">Map Tiles API</a></li>
+      <li>Go to <a href="https://console.cloud.google.com/billing" target="_blank">Billing</a> &mdash; link a billing account (free tier: ~14,000 tile loads/month)</li>
+      <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank">Credentials</a> &rarr; Create API Key</li>
+      <li>Paste the key below and click <strong style="color:var(--text)">Validate</strong></li>
+    </ol>
+  </div>
+
   <label for="apiKey">Google Maps API Key</label>
   <div class="input-row">
     <input type="text" id="apiKey" placeholder="AIzaSy...">
