@@ -206,6 +206,7 @@ class BatchRenderer:
             raise FileNotFoundError(f"Viewer HTML not found: {self._vpath}")
 
         self._loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self._loop)
         self._pw = self._loop.run_until_complete(async_playwright().start())
         self._browser = self._loop.run_until_complete(
             self._pw.chromium.launch(headless=self._options.headless, args=_GPU_ARGS)
