@@ -217,12 +217,6 @@ class BatchRenderer:
             )
         )
 
-        def _on_console(msg):
-            text = msg.text.strip()
-            if text:
-                self._console_messages.append(f"[{msg.type}] {text}")
-
-        self._page.on("console", _on_console)
         self._loop.run_until_complete(
             self._page.goto(self._vpath.as_uri(), wait_until="networkidle")
         )
@@ -265,6 +259,15 @@ class BatchRenderer:
         """Render one shot (preload + capture). Browser stays alive after."""
         return self._loop.run_until_complete(self._capture(shot, frame_dir))
 
+    def render_still(
+        self,
+        shot: ShotPlan,
+        image_path: Path,
+        t_sec: float | None = None,
+    ) -> None:
+        """Render one still image from a shot while reusing the browser session."""
+        self._loop.run_until_complete(self._capture_still(shot, image_path, t_sec))
+
     # ── internals ──
 
     async def _capture(self, shot: ShotPlan, frame_dir: Path) -> int:
@@ -292,3 +295,26 @@ class BatchRenderer:
             )
 
         return total_frames
+
+    async def _capture_still(
+        self,
+        shot: ShotPlan,
+        image_path: Path,
+        t_sec: float | None,
+    ) -> None:
+        image_path.parent.mkdir(parents=True, exist_ok=True)
+
+        kf_positions = [_kf_to_dict(k) for k in shot.keyframes]
+        await self._page.evaluate(
+            "async (pos) => { await window.preloadPositions(pos); }",
+            kf_positions,
+        )
+
+        if t_sec is None:
+            t_sec = shot.duration_sec * 0.5
+        t_sec = max(0.0, min(float(t_sec), float(shot.duration_sec)))
+        state = _interpolate_state(shot.keyframes, t_sec)
+
+        await self._page.evaluate("(s) => window.setCameraState(s);", state)
+        await self._page.evaluate("async () => { await window.renderOnce(); }")
+        await self._page.screenshot(path=str(image_path), type="png")

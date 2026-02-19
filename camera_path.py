@@ -50,6 +50,9 @@ _ORBIT_TILT_OFFSET_DEG = -5.0
 
 _MIN_TILT_DEG = 5.0
 _MAX_TILT_DEG = 89.0
+# Global motion pacing: 2.0 means camera traverses half distance
+# within the same output video duration (slower movement).
+_GLOBAL_MOTION_TIME_SCALE = 2.0
 
 
 def _orbit_keyframes(
@@ -83,7 +86,7 @@ def _orbit_keyframes(
 
         keyframes.append(
             CameraKeyframe(
-                t=duration_sec * p,
+                t=duration_sec * p * _GLOBAL_MOTION_TIME_SCALE,
                 lat=lat,
                 lng=lng,
                 alt_m=alt,
@@ -145,7 +148,7 @@ def _dolly_keyframes(
 
         keyframes.append(
             CameraKeyframe(
-                t=duration_sec * p,
+                t=duration_sec * p * _GLOBAL_MOTION_TIME_SCALE,
                 lat=lat,
                 lng=lng,
                 alt_m=alt,
@@ -181,7 +184,7 @@ def _figure_eight_keyframes(
 
         keyframes.append(
             CameraKeyframe(
-                t=duration_sec * p,
+                t=duration_sec * p * _GLOBAL_MOTION_TIME_SCALE,
                 lat=lat,
                 lng=lng,
                 alt_m=alt,
@@ -222,7 +225,7 @@ def generate_shot_plans(
             "aerial_flyby_north",
             "Aerial Flyby (North→South)",
             "helicopter",
-            "Straight flyby. Aerial shot passing alongside the building (forward-looking).",
+            "Straight flyby. Camera continuously tracks the target at screen center.",
             lambda: _dolly_keyframes(
                 target_lat,
                 target_lng,
@@ -232,10 +235,9 @@ def generate_shot_plans(
                 distance_end_m=400,
                 alt_start_m=500,
                 alt_end_m=500,
-                lateral_offset_start_m=-50,
-                lateral_offset_end_m=50,
-                look_forward=True,
-                forward_tilt_deg=78.0,
+                lateral_offset_start_m=-90,
+                lateral_offset_end_m=90,
+                look_forward=False,
             ),
         ),
         # 3: extreme slow
@@ -299,7 +301,7 @@ def generate_shot_plans(
             "aerial_flyby_diagonal",
             "Aerial Flyby (Diagonal)",
             "helicopter",
-            "Diagonal flyby. Passes diagonally alongside the building (forward-looking).",
+            "Diagonal flyby. Camera continuously tracks the target at screen center.",
             lambda: _dolly_keyframes(
                 target_lat,
                 target_lng,
@@ -309,10 +311,9 @@ def generate_shot_plans(
                 distance_end_m=450,
                 alt_start_m=700,
                 alt_end_m=700,
-                lateral_offset_start_m=-47,
-                lateral_offset_end_m=47,
-                look_forward=True,
-                forward_tilt_deg=78.0,
+                lateral_offset_start_m=-85,
+                lateral_offset_end_m=85,
+                look_forward=False,
             ),
         ),
         # 7: descent

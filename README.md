@@ -22,6 +22,12 @@ Google Photorealistic 3D Tiles + CesiumJS based. Specialized tool for drone/heli
 
 - Address or coordinate input → Automatically generate 5~10 diverse aerial shots
 - 10 camera presets: orbit, flyby, flythrough, descent/ascent, and more
+- Global default camera pacing tuned to **0.5x slower** for smoother cinematic motion
+- Reference image workflow:
+  - Drag & drop a reference image in Step 2
+  - Generate screenshot candidates first
+  - Select one screenshot and auto-generate 3 quick videos (480x270)
+  - Select one quick video and continue to detailed camera editing
 - Real-time adjustment of camera altitude, radius, azimuth, tilt, and speed via sliders
 - 270p preview → 4K final rendering
 - Automatically bake altitude/speed/recommended platform (drone vs helicopter) metadata overlay on MP4
@@ -88,10 +94,16 @@ python bot.py --place "Seoul City Hall" --shots 10 --dry-run
 ## Usage Flow (Web App)
 
 1. **Enter API key** → Automatically verify billing connection status
-2. **Enter address or coordinates** + shot count, video length, resolution, texture selection
-3. **Generate preview** → Real-time progress bar display
-4. **Select video** → Edit with camera parameter sliders
-5. **Generate** → Final render at desired resolution (up to 4K) + download
+2. **Enter address or coordinates** + shot count, video length, resolution, texture, and shot type
+3. Choose one workflow:
+   - **Just Generate Video**: directly render video previews
+   - **Screenshots First**: upload reference image → generate screenshot candidates
+4. If using screenshot-first:
+   - Select one screenshot candidate
+   - Generate 3 quick videos (480x270)
+   - Select one quick video
+5. **Edit detailed camera params** (altitude/radius/heading/tilt/speed) with sliders
+6. **Generate final video** at desired resolution (up to 4K) + download
 
 ## Output Files
 

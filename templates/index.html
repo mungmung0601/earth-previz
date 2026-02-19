@@ -65,7 +65,17 @@ input[type=range]{width:100%;-webkit-appearance:none;background:var(--border);he
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer}
 
 .gen-options{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px}
-@media(max-width:700px){.gen-options{grid-template-columns:1fr}.video-grid{grid-template-columns:1fr}}
+@media(max-width:700px){.gen-options{grid-template-columns:1fr}.video-grid{grid-template-columns:1fr}.action-row{grid-template-columns:1fr}}
+
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dropzone{margin-top:12px;padding:14px;border:1px dashed var(--border);border-radius:10px;background:#0d1117;cursor:pointer;transition:border .15s,background .15s}
+.dropzone:hover{border-color:var(--accent)}
+.dropzone.dragover{border-color:var(--accent);background:#0d1d33}
+.dropzone .small{font-size:12px;color:var(--text2);margin-top:6px}
+.mini-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.ref-preview{margin-top:10px;display:flex;gap:10px;align-items:center}
+.ref-preview img{width:110px;height:62px;object-fit:cover;border-radius:6px;border:1px solid var(--border);background:#000}
+.ref-preview .name{font-size:12px;color:var(--text2)}
 
 .hidden{display:none}
 .spin{display:inline-block;animation:spin 1s linear infinite}
@@ -111,6 +121,21 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
   <div class="input-row">
     <input type="text" id="locationQuery" placeholder="Address, building name, or lat,lng">
   </div>
+
+  <input type="file" id="referenceImageInput" accept="image/png,image/jpeg,image/webp" class="hidden">
+  <div class="dropzone" id="referenceDropzone" onclick="document.getElementById('referenceImageInput').click()">
+    <div><strong>Reference Image (Optional for Just Generate / Required for Screenshot-first)</strong></div>
+    <div class="small">Drag & drop an image here, or click to upload.</div>
+  </div>
+  <div class="mini-actions">
+    <button class="btn-sm btn-primary" type="button" onclick="clearReferenceImage()">No Reference Image</button>
+    <button class="btn-sm btn-danger" type="button" onclick="startNewSession()">Start New Generation</button>
+  </div>
+  <div class="ref-preview hidden" id="referencePreview">
+    <img id="referencePreviewImg" alt="Reference preview">
+    <div class="name" id="referenceFileName"></div>
+  </div>
+
   <div class="gen-options" style="margin-top:14px">
     <div>
       <label for="numShots">Number of Shots</label>
@@ -152,8 +177,19 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
         <option value="60">60 fps</option>
       </select>
     </div>
+    <div>
+      <label for="shotMode">Shot Type</label>
+      <select id="shotMode">
+        <option value="mixed" selected>Mixed (Orbit + Flyby)</option>
+        <option value="orbit">Orbit-focused</option>
+        <option value="flyby">Flyby-focused</option>
+      </select>
+    </div>
   </div>
-  <button class="btn-primary" id="btnGenerate" onclick="startGeneration()" style="width:100%;margin-top:14px;padding:12px;font-size:15px">Generate Previews</button>
+  <div class="action-row" style="margin-top:14px">
+    <button class="btn-primary" id="btnGenerate" onclick="startGeneration()" style="padding:12px;font-size:15px">Just Generate Video</button>
+    <button class="btn-success" id="btnFindReference" onclick="startReferenceStills()" style="padding:12px;font-size:15px">Screenshots First</button>
+  </div>
   <div id="locationStatus"></div>
   <div id="progressArea" class="hidden" style="margin-top:16px">
     <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
@@ -164,8 +200,17 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <!-- STEP 3: Video Previews -->
 <div class="card hidden" id="step-preview">
   <h2><span class="num">3</span> Select Preview</h2>
-  <p style="font-size:13px;color:var(--text2);margin-bottom:8px">Click a video to select it. You can edit the camera of the selected video.</p>
+  <p style="font-size:13px;color:var(--text2);margin-bottom:8px" id="previewHelpText">Click a video to select it. You can edit the camera of the selected video.</p>
   <div class="video-grid" id="videoGrid"></div>
+  <div class="hidden" id="stillActionArea" style="margin-top:14px">
+    <button class="btn-success" id="btnGenerateFromStill" onclick="generateFromSelectedStill()" style="width:100%;padding:12px;font-size:15px">
+      Generate 3 Quick Videos (480×270)
+    </button>
+  </div>
+  <div id="previewProgressArea" class="hidden" style="margin-top:14px">
+    <div class="progress-bar"><div class="fill" id="previewProgressFill" style="width:0%"></div></div>
+    <div class="progress-text" id="previewProgressText">Preparing...</div>
+  </div>
 </div>
 
 <!-- STEP 4: Editor -->
@@ -255,8 +300,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 <script>
 let currentTaskId = null;
 let selectedShot = null;
+let selectedStillShot = null;
+let currentPreviewMode = 'video';
 let generationLat = null;
 let generationLng = null;
+let referenceImageFile = null;
+const activePollIntervals = new Set();
 
 function showStatus(elId, msg, type) {
   const el = document.getElementById(elId);
@@ -266,6 +315,76 @@ function showStatus(elId, msg, type) {
 function updateSliderLabel(name, unit) {
   const slider = document.getElementById('slider' + name);
   document.getElementById('val' + name).textContent = slider.value + unit;
+}
+
+function setReferenceImage(file) {
+  referenceImageFile = file || null;
+  const preview = document.getElementById('referencePreview');
+  const previewImg = document.getElementById('referencePreviewImg');
+  const name = document.getElementById('referenceFileName');
+  if (!referenceImageFile) {
+    preview.classList.add('hidden');
+    previewImg.removeAttribute('src');
+    name.textContent = '';
+    return;
+  }
+  preview.classList.remove('hidden');
+  previewImg.src = URL.createObjectURL(referenceImageFile);
+  name.textContent = `${referenceImageFile.name} (${Math.round(referenceImageFile.size / 1024)} KB)`;
+}
+
+function clearReferenceImage() {
+  const input = document.getElementById('referenceImageInput');
+  input.value = '';
+  setReferenceImage(null);
+}
+
+function clearActivePolls() {
+  activePollIntervals.forEach((id) => clearInterval(id));
+  activePollIntervals.clear();
+}
+
+function resetGenerationViews() {
+  currentTaskId = null;
+  selectedShot = null;
+  selectedStillShot = null;
+
+  document.getElementById('progressArea').classList.add('hidden');
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressText').textContent = 'Preparing...';
+
+  document.getElementById('previewProgressArea').classList.add('hidden');
+  document.getElementById('previewProgressFill').style.width = '0%';
+  document.getElementById('previewProgressText').textContent = 'Preparing...';
+
+  document.getElementById('step-preview').classList.add('hidden');
+  document.getElementById('videoGrid').innerHTML = '';
+  document.getElementById('stillActionArea').classList.add('hidden');
+  document.getElementById('btnGenerateFromStill').disabled = false;
+  document.getElementById('previewHelpText').textContent =
+    'Click a video to select it. You can edit the camera of the selected video.';
+
+  document.getElementById('step-editor').classList.add('hidden');
+  document.getElementById('selectedVideo').removeAttribute('src');
+  document.getElementById('selectedVideo').load();
+  document.getElementById('btnRegenerate').disabled = false;
+  document.getElementById('regenProgress').classList.add('hidden');
+  document.getElementById('regenFill').style.width = '0%';
+  document.getElementById('regenText').textContent = 'Rendering...';
+  document.getElementById('regenStatus').innerHTML = '';
+
+  document.getElementById('step-result').classList.add('hidden');
+  document.getElementById('finalVideo').removeAttribute('src');
+  document.getElementById('finalVideo').load();
+  document.getElementById('downloadLink').removeAttribute('href');
+}
+
+function startNewSession() {
+  clearActivePolls();
+  resetGenerationViews();
+  setGenerationButtons(false);
+  showStatus('locationStatus', 'Ready for a new location/reference. Enter new inputs and generate again.', 'info');
+  document.getElementById('locationQuery').focus();
 }
 
 async function validateKey() {
@@ -305,21 +424,47 @@ async function validateKey() {
   }
 }
 
+function setGenerationButtons(disabled) {
+  document.getElementById('btnGenerate').disabled = disabled;
+  document.getElementById('btnFindReference').disabled = disabled;
+}
+
+async function resolveLocation(query) {
+  const geoRes = await fetch('/api/geocode', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  return geoRes.json();
+}
+
+function prepareProgress(text = 'Preparing...') {
+  document.getElementById('progressArea').classList.remove('hidden');
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('progressText').textContent = text;
+}
+
+function preparePreviewProgress(text = 'Preparing...') {
+  document.getElementById('previewProgressArea').classList.remove('hidden');
+  document.getElementById('previewProgressFill').style.width = '0%';
+  document.getElementById('previewProgressText').textContent = text;
+}
+
 async function startGeneration() {
   const query = document.getElementById('locationQuery').value.trim();
   if (!query) { showStatus('locationStatus', 'Please enter a location.', 'err'); return; }
 
-  document.getElementById('btnGenerate').disabled = true;
-  showStatus('locationStatus', '', 'info');
+  clearActivePolls();
+  resetGenerationViews();
+  setGenerationButtons(true);
+  currentPreviewMode = 'video';
+  selectedStillShot = null;
+  prepareProgress('Resolving location...');
 
-  const geoRes = await fetch('/api/geocode', {
-    method: 'POST', body: JSON.stringify({ query })
-  });
-  const geoData = await geoRes.json();
-
+  const geoData = await resolveLocation(query);
   if (!geoData.ok) {
     showStatus('locationStatus', geoData.error, 'err');
-    document.getElementById('btnGenerate').disabled = false;
+    setGenerationButtons(false);
     return;
   }
 
@@ -327,27 +472,84 @@ async function startGeneration() {
   generationLat = geoData.lat;
   generationLng = geoData.lng;
 
-  const numShots = document.getElementById('numShots').value;
   const genRes = await fetch('/api/generate', {
-    method: 'POST', body: JSON.stringify({
-      lat: geoData.lat, lng: geoData.lng, numShots,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      lat: geoData.lat,
+      lng: geoData.lng,
+      numShots: +document.getElementById('numShots').value,
       duration_sec: +document.getElementById('prevDuration').value,
       resolution: document.getElementById('prevResolution').value,
       texture: document.getElementById('prevTexture').value,
       fps: +document.getElementById('prevFps').value,
-    })
+      shot_mode: document.getElementById('shotMode').value,
+    }),
   });
   const genData = await genRes.json();
 
   if (!genData.ok) {
     showStatus('locationStatus', genData.error, 'err');
-    document.getElementById('btnGenerate').disabled = false;
+    setGenerationButtons(false);
     return;
   }
 
   currentTaskId = genData.taskId;
-  document.getElementById('progressArea').classList.remove('hidden');
+  prepareProgress('Rendering video previews...');
   pollTask(currentTaskId, 'progressFill', 'progressText', onPreviewsDone);
+}
+
+async function startReferenceStills() {
+  const query = document.getElementById('locationQuery').value.trim();
+  if (!query) { showStatus('locationStatus', 'Please enter a location.', 'err'); return; }
+  if (!referenceImageFile) {
+    showStatus('locationStatus', 'Please upload a reference image first.', 'err');
+    return;
+  }
+
+  clearActivePolls();
+  resetGenerationViews();
+  setGenerationButtons(true);
+  currentPreviewMode = 'still';
+  selectedStillShot = null;
+  prepareProgress('Resolving location...');
+
+  const geoData = await resolveLocation(query);
+  if (!geoData.ok) {
+    showStatus('locationStatus', geoData.error, 'err');
+    setGenerationButtons(false);
+    return;
+  }
+
+  showStatus('locationStatus', `${geoData.display} (${geoData.lat.toFixed(6)}, ${geoData.lng.toFixed(6)})`, 'ok');
+  generationLat = geoData.lat;
+  generationLng = geoData.lng;
+
+  const fd = new FormData();
+  fd.append('lat', String(geoData.lat));
+  fd.append('lng', String(geoData.lng));
+  fd.append('numShots', document.getElementById('numShots').value);
+  fd.append('duration_sec', document.getElementById('prevDuration').value);
+  fd.append('resolution', document.getElementById('prevResolution').value);
+  fd.append('texture', document.getElementById('prevTexture').value);
+  fd.append('fps', document.getElementById('prevFps').value);
+  fd.append('shot_mode', document.getElementById('shotMode').value);
+  fd.append('reference_image', referenceImageFile);
+
+  const res = await fetch('/api/generate-reference-stills', {
+    method: 'POST',
+    body: fd,
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    showStatus('locationStatus', data.error, 'err');
+    setGenerationButtons(false);
+    return;
+  }
+
+  currentTaskId = data.taskId;
+  prepareProgress('Generating screenshot candidates...');
+  pollTask(currentTaskId, 'progressFill', 'progressText', onReferenceStillsDone);
 }
 
 function pollTask(taskId, fillId, textId, onDone) {
@@ -356,7 +558,10 @@ function pollTask(taskId, fillId, textId, onDone) {
     const data = await res.json();
     if (!data.ok) { clearInterval(interval); return; }
 
-    const pct = data.total > 0 ? Math.round((data.videos.length / data.total) * 100) : 0;
+    const completed = Array.isArray(data.videos)
+      ? data.videos.length
+      : (Array.isArray(data.stills) ? data.stills.length : 0);
+    const pct = data.total > 0 ? Math.round((completed / data.total) * 100) : 0;
     document.getElementById(fillId).style.width = pct + '%';
 
     if (data.status === 'running') {
@@ -364,19 +569,28 @@ function pollTask(taskId, fillId, textId, onDone) {
         `Rendering... ${data.current}/${data.total} — ${data.current_name}`;
     } else if (data.status === 'done') {
       clearInterval(interval);
+      activePollIntervals.delete(interval);
       document.getElementById(fillId).style.width = '100%';
       document.getElementById(textId).textContent = `Done! (${data.videos.length} generated)`;
       onDone(data);
     } else if (data.status === 'error') {
       clearInterval(interval);
+      activePollIntervals.delete(interval);
       document.getElementById(textId).textContent = `Error: ${data.error}`;
+      setGenerationButtons(false);
     }
   }, 3000);
+  activePollIntervals.add(interval);
 }
 
 function onPreviewsDone(data) {
-  document.getElementById('btnGenerate').disabled = false;
+  setGenerationButtons(false);
+  currentPreviewMode = 'video';
   document.getElementById('step-preview').classList.remove('hidden');
+  document.getElementById('previewProgressArea').classList.add('hidden');
+  document.getElementById('previewHelpText').textContent =
+    'Click a video to select it. You can edit the camera of the selected video.';
+  document.getElementById('stillActionArea').classList.add('hidden');
 
   const grid = document.getElementById('videoGrid');
   grid.innerHTML = '';
@@ -405,10 +619,135 @@ function onPreviewsDone(data) {
   });
 }
 
+function onReferenceStillsDone(data) {
+  setGenerationButtons(false);
+  currentPreviewMode = 'still';
+  selectedStillShot = null;
+  document.getElementById('progressArea').classList.add('hidden');
+  document.getElementById('step-preview').classList.remove('hidden');
+  document.getElementById('previewProgressArea').classList.add('hidden');
+  document.getElementById('step-editor').classList.add('hidden');
+  document.getElementById('step-result').classList.add('hidden');
+  document.getElementById('previewHelpText').textContent =
+    'Click a screenshot candidate, then generate video from the selected angle.';
+
+  const stills = data.stills || data.videos || [];
+  const grid = document.getElementById('videoGrid');
+  grid.innerHTML = '';
+
+  stills.forEach((s, idx) => {
+    const rec = s.analysis?.recommendation || {};
+    const motion = s.analysis?.motion || {};
+    const card = document.createElement('div');
+    card.className = 'video-card';
+    card.dataset.idx = idx;
+    card.innerHTML = `
+      <img src="${s.still_url}" style="width:100%;display:block;background:#000;aspect-ratio:16/9;object-fit:cover">
+      <div class="info">
+        <h4>${s.title}</h4>
+        <p>${s.style}</p>
+        <div class="meta-badges">
+          <span class="badge badge-blue">MATCH ${s.similarity?.toFixed(1) || '?'}%</span>
+          <span class="badge badge-orange">SPD ${motion.avg_speed_mps?.toFixed(1) || '?'} m/s</span>
+          <span class="badge badge-green">${(rec.recommended_platform || 'N/A').toUpperCase()}</span>
+        </div>
+      </div>
+    `;
+    card.onclick = () => selectStill(idx, stills);
+    grid.appendChild(card);
+  });
+
+  document.getElementById('stillActionArea').classList.add('hidden');
+}
+
+function selectStill(idx, stills) {
+  document.querySelectorAll('.video-card').forEach(c => c.classList.remove('selected'));
+  document.querySelectorAll('.video-card')[idx]?.classList.add('selected');
+  selectedStillShot = stills[idx];
+  document.getElementById('stillActionArea').classList.remove('hidden');
+}
+
+async function generateFromSelectedStill() {
+  if (!selectedStillShot || generationLat === null || generationLng === null) {
+    showStatus('locationStatus', 'Select one screenshot candidate first.', 'err');
+    return;
+  }
+
+  document.getElementById('btnGenerateFromStill').disabled = true;
+  document.getElementById('step-editor').classList.add('hidden');
+  document.getElementById('step-result').classList.add('hidden');
+  document.getElementById('progressArea').classList.add('hidden');
+  preparePreviewProgress('Generating 3 quick videos from selected screenshot...');
+  document.getElementById('step-preview').scrollIntoView({ behavior: 'smooth' });
+
+  const body = {
+    lat: generationLat,
+    lng: generationLng,
+    shot_id: selectedStillShot.shot_id,
+    duration_sec: +document.getElementById('prevDuration').value,
+    resolution: '270p',
+    texture: document.getElementById('prevTexture').value,
+    fps: +document.getElementById('prevFps').value,
+    reference_hints: selectedStillShot.reference_hints || {},
+  };
+
+  const res = await fetch('/api/generate-from-shot', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    document.getElementById('btnGenerateFromStill').disabled = false;
+    showStatus('locationStatus', data.error, 'err');
+    return;
+  }
+
+  pollTask(data.taskId, 'previewProgressFill', 'previewProgressText', onQuickVideosFromStillDone);
+}
+
+function onQuickVideosFromStillDone(taskData) {
+  document.getElementById('btnGenerateFromStill').disabled = false;
+  currentPreviewMode = 'video';
+  document.getElementById('stillActionArea').classList.add('hidden');
+  document.getElementById('previewProgressArea').classList.add('hidden');
+
+  const videos = taskData.videos || [];
+  const grid = document.getElementById('videoGrid');
+  grid.innerHTML = '';
+  document.getElementById('previewHelpText').textContent =
+    'Reference-matched quick videos are ready. Select one to open detailed camera controls.';
+
+  videos.forEach((v, idx) => {
+    const rec = v.analysis?.recommendation || {};
+    const motion = v.analysis?.motion || {};
+    const card = document.createElement('div');
+    card.className = 'video-card';
+    card.dataset.idx = idx;
+    card.innerHTML = `
+      <video src="${v.video_url}" muted loop preload="metadata"
+             onmouseenter="this.play()" onmouseleave="this.pause();this.currentTime=0"></video>
+      <div class="info">
+        <h4>${v.title}</h4>
+        <p>${v.style} • 480×270</p>
+        <div class="meta-badges">
+          <span class="badge badge-blue">ALT ${motion.avg_altitude_m?.toFixed(0) || '?'}m</span>
+          <span class="badge badge-orange">SPD ${motion.avg_speed_mps?.toFixed(1) || '?'} m/s</span>
+          <span class="badge badge-green">${(rec.recommended_platform || 'N/A').toUpperCase()}</span>
+        </div>
+      </div>
+    `;
+    card.onclick = () => selectVideo(idx, videos);
+    grid.appendChild(card);
+  });
+}
+
 function selectVideo(idx, videos) {
   document.querySelectorAll('.video-card').forEach(c => c.classList.remove('selected'));
   document.querySelectorAll('.video-card')[idx]?.classList.add('selected');
 
+  currentPreviewMode = 'video';
+  document.getElementById('stillActionArea').classList.add('hidden');
   selectedShot = videos[idx];
   const v = document.getElementById('selectedVideo');
   v.src = selectedShot.video_url;
@@ -484,6 +823,41 @@ window.addEventListener('DOMContentLoaded', () => {
   if (saved) {
     document.getElementById('apiKey').value = saved;
   }
+
+  const input = document.getElementById('referenceImageInput');
+  const dropzone = document.getElementById('referenceDropzone');
+
+  input.addEventListener('change', () => {
+    const file = input.files && input.files[0] ? input.files[0] : null;
+    setReferenceImage(file);
+  });
+
+  ['dragenter', 'dragover'].forEach((eventName) => {
+    dropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach((eventName) => {
+    dropzone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('dragover');
+    });
+  });
+  dropzone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showStatus('locationStatus', 'Only image files are supported for reference.', 'err');
+      return;
+    }
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    input.files = dt.files;
+    setReferenceImage(file);
+  });
 });
 document.getElementById('apiKey').addEventListener('change', function() {
   localStorage.setItem('aerial_api_key', this.value.trim());
