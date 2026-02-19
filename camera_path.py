@@ -48,6 +48,9 @@ def _look_at_tilt_deg(
 
 _ORBIT_TILT_OFFSET_DEG = -5.0
 
+_MIN_TILT_DEG = 5.0
+_MAX_TILT_DEG = 89.0
+
 
 def _orbit_keyframes(
     target_lat: float,
@@ -75,7 +78,8 @@ def _orbit_keyframes(
         lat, lng = _offset_lat_lng(target_lat, target_lng, north, east)
         alt = _lerp(alt_start_m, alt_end_m, p)
         heading_deg = _bearing_deg(lat, lng, target_lat, target_lng)
-        tilt_deg = _look_at_tilt_deg(lat, lng, alt, target_lat, target_lng) + tilt_offset_deg
+        raw_tilt = _look_at_tilt_deg(lat, lng, alt, target_lat, target_lng) + tilt_offset_deg
+        tilt_deg = max(_MIN_TILT_DEG, min(_MAX_TILT_DEG, raw_tilt))
 
         keyframes.append(
             CameraKeyframe(
@@ -133,10 +137,11 @@ def _dolly_keyframes(
                 nxt_lat = lat + (lat - prv_lat)
                 nxt_lng = lng + (lng - prv_lng)
             heading_deg = _bearing_deg(lat, lng, nxt_lat, nxt_lng)
-            tilt_deg = forward_tilt_deg
+            tilt_deg = max(_MIN_TILT_DEG, min(_MAX_TILT_DEG, forward_tilt_deg))
         else:
             heading_deg = _bearing_deg(lat, lng, target_lat, target_lng)
-            tilt_deg = _look_at_tilt_deg(lat, lng, alt, target_lat, target_lng)
+            raw_tilt = _look_at_tilt_deg(lat, lng, alt, target_lat, target_lng)
+            tilt_deg = max(_MIN_TILT_DEG, min(_MAX_TILT_DEG, raw_tilt))
 
         keyframes.append(
             CameraKeyframe(
@@ -171,7 +176,8 @@ def _figure_eight_keyframes(
         lat, lng = _offset_lat_lng(target_lat, target_lng, north, east)
         alt = _lerp(alt_start_m, alt_end_m, p)
         heading_deg = _bearing_deg(lat, lng, target_lat, target_lng)
-        tilt_deg = _look_at_tilt_deg(lat, lng, alt, target_lat, target_lng)
+        raw_tilt = _look_at_tilt_deg(lat, lng, alt, target_lat, target_lng)
+        tilt_deg = max(_MIN_TILT_DEG, min(_MAX_TILT_DEG, raw_tilt))
 
         keyframes.append(
             CameraKeyframe(

@@ -320,7 +320,7 @@ def regenerate_shot():
         alt_end_m=alt_m,
         azimuth_start_deg=heading_deg,
         sweep_deg=sweep_deg / max(speed_factor, 0.1),
-        tilt_offset_deg=tilt_deg - 30,
+        tilt_offset_deg=tilt_deg,
     )
 
     shot = ShotPlan(
