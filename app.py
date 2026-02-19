@@ -138,55 +138,56 @@ def _generate_previews(task_id: str, lat: float, lng: float, num_shots: int,
     task["run_dir"] = str(run_dir)
 
     try:
+        from renderer import BatchRenderer, RenderOptions
+        import shutil
+
         shot_plans = generate_shot_plans(lat, lng, duration_sec=duration_sec, num_shots=num_shots)
         task["total"] = len(shot_plans)
         task["videos"] = []
 
-        for idx, shot in enumerate(shot_plans):
-            task["current"] = idx + 1
-            task["current_name"] = shot.title
+        options = RenderOptions(
+            width=width, height=height, fps=fps,
+            google_api_key=api_key, headless=True,
+        )
 
-            analysis = build_shot_analysis(shot)
+        with BatchRenderer(options) as renderer:
+            renderer.boot(shot_plans[0].keyframes[0])
 
-            kml_path = run_dir / "kml" / f"{shot.shot_id}.kml"
-            export_kml(shot, kml_path, fps=2)
-            jsx_path = run_dir / "jsx" / f"{shot.shot_id}.jsx"
-            export_jsx(shot, jsx_path, fps=fps, width=width, height=height)
+            for idx, shot in enumerate(shot_plans):
+                task["current"] = idx + 1
+                task["current_name"] = shot.title
 
-            from renderer import RenderOptions, render_shot_frames
+                analysis = build_shot_analysis(shot)
 
-            frame_dir = run_dir / "frames" / shot.shot_id
-            rendered = render_shot_frames(
-                shot=shot,
-                frame_dir=frame_dir,
-                options=RenderOptions(
-                    width=width, height=height, fps=fps,
-                    google_api_key=api_key, headless=True,
-                ),
-            )
+                kml_path = run_dir / "kml" / f"{shot.shot_id}.kml"
+                export_kml(shot, kml_path, fps=2)
+                jsx_path = run_dir / "jsx" / f"{shot.shot_id}.jsx"
+                export_jsx(shot, jsx_path, fps=fps, width=width, height=height)
 
-            video_path = run_dir / "videos" / f"{shot.shot_id}.mp4"
-            _encode_with_metadata(frame_dir, video_path, shot, analysis, fps=fps)
+                frame_dir = run_dir / "frames" / shot.shot_id
+                rendered = renderer.render_shot(shot, frame_dir)
 
-            import shutil
-            shutil.rmtree(frame_dir, ignore_errors=True)
+                video_path = run_dir / "videos" / f"{shot.shot_id}.mp4"
+                _encode_with_metadata(frame_dir, video_path, shot, analysis, fps=fps)
 
-            task["videos"].append({
-                "shot_id": shot.shot_id,
-                "title": shot.title,
-                "style": shot.style,
-                "video_url": f"/output/run_{run_id}/videos/{shot.shot_id}.mp4",
-                "frames": rendered,
-                "analysis": analysis,
-                "keyframes": [
-                    {
-                        "t": k.t, "lat": k.lat, "lng": k.lng,
-                        "alt_m": k.alt_m, "heading_deg": k.heading_deg,
-                        "tilt_deg": k.tilt_deg,
-                    }
-                    for k in shot.keyframes
-                ],
-            })
+                shutil.rmtree(frame_dir, ignore_errors=True)
+
+                task["videos"].append({
+                    "shot_id": shot.shot_id,
+                    "title": shot.title,
+                    "style": shot.style,
+                    "video_url": f"/output/run_{run_id}/videos/{shot.shot_id}.mp4",
+                    "frames": rendered,
+                    "analysis": analysis,
+                    "keyframes": [
+                        {
+                            "t": k.t, "lat": k.lat, "lng": k.lng,
+                            "alt_m": k.alt_m, "heading_deg": k.heading_deg,
+                            "tilt_deg": k.tilt_deg,
+                        }
+                        for k in shot.keyframes
+                    ],
+                })
 
         task["status"] = "done"
     except Exception as exc:

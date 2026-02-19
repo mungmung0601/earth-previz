@@ -109,7 +109,19 @@
         assertReady();
         viewer.scene.requestRender();
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-        await waitForTiles(3000);
+        if (tileset && tileset._statistics.numberOfPendingRequests > 0) {
+          await waitForTiles(2000);
+        }
+      };
+
+      window.preloadPositions = async function preloadPositions(positions) {
+        assertReady();
+        for (const pos of positions) {
+          setCameraState(pos);
+          viewer.scene.requestRender();
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        await waitForTiles(15000);
       };
     </script>
   </body>
