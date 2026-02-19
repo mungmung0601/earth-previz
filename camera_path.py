@@ -193,6 +193,7 @@ def generate_shot_plans(
     num_shots: int = 10,
 ) -> list[ShotPlan]:
     builders: list[tuple[str, str, str, str, Callable[[], list[CameraKeyframe]]]] = [
+        # 1: orbit
         (
             "aerial_slow_orbit_close",
             "Aerial Slow Orbit (Close)",
@@ -210,57 +211,7 @@ def generate_shot_plans(
                 sweep_deg=15,
             ),
         ),
-        (
-            "aerial_slow_orbit_wide",
-            "Aerial Slow Orbit (Wide)",
-            "helicopter",
-            "High-altitude wide orbit. City-scale screensaver.",
-            lambda: _orbit_keyframes(
-                target_lat,
-                target_lng,
-                duration_sec,
-                radius_start_m=1_500,
-                radius_end_m=1_500,
-                alt_start_m=750,
-                alt_end_m=750,
-                azimuth_start_deg=45,
-                sweep_deg=13,
-            ),
-        ),
-        (
-            "aerial_extreme_slow",
-            "Aerial Extreme Slow Orbit",
-            "helicopter",
-            "Extremely slow orbit. Barely perceptible movement, ideal for screensaver loops.",
-            lambda: _orbit_keyframes(
-                target_lat,
-                target_lng,
-                duration_sec,
-                radius_start_m=1_000,
-                radius_end_m=1_000,
-                alt_start_m=550,
-                alt_end_m=550,
-                azimuth_start_deg=270,
-                sweep_deg=5,
-            ),
-        ),
-        (
-            "aerial_grand_panorama",
-            "Aerial Grand Panorama",
-            "helicopter",
-            "Ultra-high altitude large arc. Panoramic view of the entire terrain.",
-            lambda: _orbit_keyframes(
-                target_lat,
-                target_lng,
-                duration_sec,
-                radius_start_m=2_500,
-                radius_end_m=2_500,
-                alt_start_m=1_400,
-                alt_end_m=1_400,
-                azimuth_start_deg=270,
-                sweep_deg=10,
-            ),
-        ),
+        # 2: flyby
         (
             "aerial_flyby_north",
             "Aerial Flyby (North→South)",
@@ -281,6 +232,25 @@ def generate_shot_plans(
                 forward_tilt_deg=78.0,
             ),
         ),
+        # 3: extreme slow
+        (
+            "aerial_extreme_slow",
+            "Aerial Extreme Slow Orbit",
+            "helicopter",
+            "Extremely slow orbit. Barely perceptible movement, ideal for screensaver loops.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=1_000,
+                radius_end_m=1_000,
+                alt_start_m=550,
+                alt_end_m=550,
+                azimuth_start_deg=270,
+                sweep_deg=5,
+            ),
+        ),
+        # 4: flythrough
         (
             "aerial_flythrough_east",
             "Aerial Flythrough (East→West)",
@@ -300,6 +270,25 @@ def generate_shot_plans(
                 look_forward=False,
             ),
         ),
+        # 5: wide orbit
+        (
+            "aerial_slow_orbit_wide",
+            "Aerial Slow Orbit (Wide)",
+            "helicopter",
+            "High-altitude wide orbit. City-scale screensaver.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=1_500,
+                radius_end_m=1_500,
+                alt_start_m=750,
+                alt_end_m=750,
+                azimuth_start_deg=45,
+                sweep_deg=13,
+            ),
+        ),
+        # 6: diagonal flyby
         (
             "aerial_flyby_diagonal",
             "Aerial Flyby (Diagonal)",
@@ -320,6 +309,7 @@ def generate_shot_plans(
                 forward_tilt_deg=78.0,
             ),
         ),
+        # 7: descent
         (
             "aerial_slow_descent",
             "Aerial Slow Descent Orbit",
@@ -337,6 +327,25 @@ def generate_shot_plans(
                 sweep_deg=17,
             ),
         ),
+        # 8: grand panorama
+        (
+            "aerial_grand_panorama",
+            "Aerial Grand Panorama",
+            "helicopter",
+            "Ultra-high altitude large arc. Panoramic view of the entire terrain.",
+            lambda: _orbit_keyframes(
+                target_lat,
+                target_lng,
+                duration_sec,
+                radius_start_m=2_500,
+                radius_end_m=2_500,
+                alt_start_m=1_400,
+                alt_end_m=1_400,
+                azimuth_start_deg=270,
+                sweep_deg=10,
+            ),
+        ),
+        # 9: ascent
         (
             "aerial_slow_ascent",
             "Aerial Slow Ascent Orbit",
@@ -354,6 +363,7 @@ def generate_shot_plans(
                 sweep_deg=17,
             ),
         ),
+        # 10: ultra high
         (
             "aerial_ultra_high",
             "Aerial Ultra High Overview",
